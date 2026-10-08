@@ -31,3 +31,5 @@ RBAC server-side in /api/admin/*, scrypt passwords, httpOnly session, rate-limit
 
 ## PWA / SEO
 manifest.webmanifest, icon.svg, sw.js offline fallback, sitemap.ts, robots.txt, OG metadata. Public listings at /post/[id].
+
+<!-- deployment retrigger 2026-10-08: B4b + Admin Separation S1/S2 -->
