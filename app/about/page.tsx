@@ -1,4 +1,4 @@
-import {Shell} from '@/components/ui'; import {Info,HeartHandshake,Sparkles} from 'lucide-react'; export const dynamic='force-dynamic';
+import {Shell} from '@/components/ui'; import {Info,HeartHandshake,Sparkles} from 'lucide-react'; export const dynamic='force-dynamic'; export const metadata={title:'অ্যাপ নির্মাতা ও পরিচিতি — বোয়ালখালী কানেক্ট',description:'বোয়ালখালী কানেক্টের নির্মাতা MD. Habibur Rahman ও এই প্ল্যাটফর্মের পরিচিতি'};
 export default function P(){ return <Shell><main className="max-w-3xl mx-auto p-4">
  <h1 className="font-black text-xl flex items-center gap-2"><Info className="text-emerald-700"/>অ্যাপ নির্মাতা ও পরিচিতি</h1>
  <div className="card mt-3 text-center"><div className="w-20 h-20 mx-auto bg-emerald-700 rounded-full grid place-items-center text-white text-3xl font-black">বো</div><h2 className="font-black text-lg mt-3">বোয়ালখালী কানেক্ট</h2><p className="text-sm text-emerald-700">বোয়ালখালী, চট্টগ্রামের ডিজিটাল সিটিজেন সার্ভিস প্ল্যাটফর্ম</p></div>
