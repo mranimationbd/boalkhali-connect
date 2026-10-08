@@ -54,3 +54,7 @@ export async function readDBAsync():Promise<any>{ if(DB_BACKEND==='file') return
 export async function writeDBAsync(d:any):Promise<void>{ if(DB_BACKEND==='file'){ writeFileDB(d); return; } const fsdb=await firestoreDB(); const json=JSON.stringify(d); try{ await fsdb.collection('bk_state').doc('main').set({json,updatedAt:new Date().toISOString()}); }catch(e:any){ throw new Error('FIRESTORE_WRITE_FAILED: '+(e?.message||e)); } _fsCache={db:JSON.parse(json),at:Date.now()}; }
 export function audit(db:any,actor:string,action:string,target:string,meta:any={}){ db.audit_logs.unshift({id:id('log'),actor,action,target,metadata:meta,createdAt:now()}); }
 export function sanitize(s:any){ return String(s||'').replace(/<[^>]*>/g,'').trim().slice(0,5000); }
+// Public projection of a post: moderation metadata never leaves the server, and when the
+// seller hid their phone (hidePhone) the contact numbers are removed for everyone except
+// the owner and ADMIN/SUPER_ADMIN/MODERATOR.
+export function publicPost(p:any,u:any){ if(!p) return p; const priv=!!u&&(u.id===p.userId||['ADMIN','SUPER_ADMIN','MODERATOR'].includes(u.role)); const q:any={...p}; delete q.moderator; delete q.latencyMin; delete q.approvedAt; delete q.rejectReason; if(p.hidePhone&&!priv){ delete q.phone; delete q.whatsapp; } return q; }
