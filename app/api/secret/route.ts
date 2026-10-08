@@ -1,0 +1,3 @@
+export const dynamic='force-dynamic';
+import {NextResponse} from 'next/server'; import {readDBAsync,writeDBAsync,sanitize,id,now} from '@/lib/db';
+export async function POST(req:Request){const b=await req.json().catch(()=>({})); const desc=sanitize(b.desc); if(desc.length<5) return NextResponse.json({error:'DESC_REQUIRED'},{status:400}); const title=sanitize(b.title).slice(0,120)||'শিরোনামহীন রিপোর্ট'; const priority=['HIGH','MEDIUM','LOW'].includes(b.priority)?b.priority:'MEDIUM'; const db=await readDBAsync(); db.secret_reports.unshift({id:id('sec'),title,desc,priority,status:'NEW',submitterHidden:true,createdAt:now()}); await writeDBAsync(db); return NextResponse.json({ok:true})}

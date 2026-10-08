@@ -1,0 +1,1 @@
+import {Shell,SkeletonList} from '@/components/ui'; export default function Loading(){return <Shell><main className="mx-auto max-w-4xl p-4"><div className="skel h-6 w-40"/><div className="skel mt-3 h-40 w-full !rounded-2xl"/><div className="mt-4"><SkeletonList count={5}/></div></main></Shell>}
