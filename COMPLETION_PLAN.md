@@ -12,12 +12,12 @@ Register/login (email+phone+Google, real Firebase verification email), full regi
 - ✅ Comments/Q&A under posts (login required, own-comment delete)
 
 ## Wave 2 — account, blood, civic
-- ⬜ Change password in profile; "ভুলে গেছেন?" → Firebase password-reset email
-- ⬜ Blood: donor registration form (group/phone/area/availability/last donation), blood request create form, own-request fulfill/cancel
-- ⬜ My complaints: status tracking (প্রাপ্ত/প্রক্রিয়াধীন/সমাধান)
-- ⬜ Jobs: call/WhatsApp apply actions
-- ⬜ Public seller profile /user/[id]: verified badge, member since, active posts
-- ⬜ Search filters: category, area, price range, sort (newest/price)
+- ✅ Change password in profile; "ভুলে গেছেন?" → Firebase password-reset email
+- ✅ Blood: donor registration form (group/phone/area/availability/last donation), blood request create form, own-request fulfill/cancel
+- ✅ My complaints: status tracking (প্রাপ্ত/প্রক্রিয়াধীন/সমাধান)
+- ✅ Jobs: call/WhatsApp apply actions
+- ✅ Public seller profile /user/[id]: verified badge, member since, active posts
+- ✅ Search filters: category, area, price range, sort (newest/price)
 
 ## Wave 3 — admin power
 - 🔨 User management: role/verify/block/unblock/delete + blocked-login enforcement (in progress 19:34 +04)
