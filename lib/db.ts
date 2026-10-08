@@ -1,5 +1,5 @@
 import fs from 'fs'; import path from 'path'; import crypto from 'crypto';
-const ON_VERCEL=!!process.env.VERCEL;
+const ON_VERCEL=!!(process.env.VERCEL||process.env.NETLIFY||process.env.AWS_LAMBDA_FUNCTION_NAME);
 export const DB_PATH=process.env.DB_PATH||(ON_VERCEL?'/tmp/boalkhali-db.json':path.join(process.cwd(),'data','db.json'));
 export const UPLOAD_DIR=process.env.UPLOAD_DIR||(ON_VERCEL?'/tmp/boalkhali-uploads':path.join(process.cwd(),'public','uploads'));
 export const UPLOAD_QUOTA_BYTES=Math.floor((Number(process.env.UPLOAD_QUOTA_GB)||5)*1024*1024*1024); // posting uploads quota: 5 GB (user, 2026-10-08)
