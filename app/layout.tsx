@@ -1,3 +1,5 @@
-import './globals.css'; import type {Metadata} from 'next';
+import './globals.css'; import type {Metadata} from 'next'; import {Baloo_Da_2,Hind_Siliguri} from 'next/font/google';
+const displayFont=Baloo_Da_2({subsets:['bengali','latin'],weight:['600','700','800'],variable:'--font-display',display:'swap'});
+const bodyFont=Hind_Siliguri({subsets:['bengali','latin'],weight:['400','500','600','700'],variable:'--font-body',display:'swap'});
 export const metadata:Metadata={title:'বোয়ালখালী কানেক্ট — বোয়ালখালী শহরের ডিজিটাল সিটিজেন প্ল্যাটফর্ম',description:'বাসা ভাড়া, বাই-সেল, ডাক্তার, রক্তদান, চাকরি ও লোকাল সেবা — বোয়ালখালী, চট্টগ্রাম',manifest:'/manifest.webmanifest',openGraph:{title:'বোয়ালখালী কানেক্ট',description:'বোয়ালখালী শহরের ডিজিটাল সিটিজেন প্ল্যাটফর্ম',type:'website'}};
-export default function Root({children}:{children:any}){return <html lang="bn"><body>{children}<script dangerouslySetInnerHTML={{__html:`if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js')`}}/></body></html>}
+export default function Root({children}:{children:any}){return <html lang="bn" className={`${displayFont.variable} ${bodyFont.variable}`}><body>{children}<script dangerouslySetInnerHTML={{__html:`if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js')`}}/></body></html>}
