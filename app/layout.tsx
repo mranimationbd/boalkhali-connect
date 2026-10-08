@@ -1,0 +1,3 @@
+import './globals.css'; import type {Metadata} from 'next';
+export const metadata:Metadata={title:'বোয়ালখালী কানেক্ট — বোয়ালখালী শহরের ডিজিটাল সিটিজেন প্ল্যাটফর্ম',description:'বাসা ভাড়া, বাই-সেল, ডাক্তার, রক্তদান, চাকরি ও লোকাল সেবা — বোয়ালখালী, চট্টগ্রাম',manifest:'/manifest.webmanifest',openGraph:{title:'বোয়ালখালী কানেক্ট',description:'বোয়ালখালী শহরের ডিজিটাল সিটিজেন প্ল্যাটফর্ম',type:'website'}};
+export default function Root({children}:{children:any}){return <html lang="bn"><body>{children}<script dangerouslySetInnerHTML={{__html:`if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js')`}}/></body></html>}

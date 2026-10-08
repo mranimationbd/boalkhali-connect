@@ -1,0 +1,1 @@
+import fs from 'fs'; if(fs.existsSync('data/db.json')) fs.unlinkSync('data/db.json'); console.log('DB will seed on first run. Set ADMIN_EMAIL/ADMIN_PASSWORD in .env.local before first run for secure admin.');

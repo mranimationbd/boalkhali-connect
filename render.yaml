@@ -1,0 +1,32 @@
+# Boalkhali Connect — Render Blueprint (GitHub-connected PaaS path chosen 2026-10-08)
+# Usage: push this repo to GitHub -> Render Dashboard -> New -> Blueprint -> select repo.
+# Render builds the Dockerfile and runs `npm start` on its assigned PORT.
+# NOTE: package.json start is fixed to -p 3100; Render sets PORT env — start command below overrides it.
+services:
+  - type: web
+    name: boalkhali-connect
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    startCommand: npx next start -p $PORT
+    envVars:
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://boalkhali.duckdns.org
+      - key: ADMIN_EMAIL
+        value: admin@boalkhali.local
+      - key: ADMIN_PASSWORD
+        sync: false # set a strong production password in Render dashboard — never commit it
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: UPLOAD_QUOTA_GB
+        value: "5"
+      - key: DB_PATH
+        value: /app/data/db.json
+      - key: UPLOAD_DIR
+        value: /app/public/uploads
+    # PERSISTENCE WARNING: Render free tier has an ephemeral filesystem.
+    # data/db.json and public/uploads will RESET on every deploy/restart unless a
+    # paid Persistent Disk is attached and mounted at /app/data and /app/public/uploads.
+    # For a real citizen platform with posts/uploads, attach a disk (paid) or migrate
+    # the file DB to Firebase/Firestore before inviting real users.

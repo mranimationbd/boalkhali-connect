@@ -1,0 +1,3 @@
+export const dynamic='force-dynamic';
+import {NextResponse} from 'next/server'; import {readDB} from '@/lib/db'; import {verifyPw,createSession,rateLimit} from '@/lib/auth';
+export async function POST(req:Request){ if(!rateLimit('login',20)) return NextResponse.json({error:'RATE_LIMIT'},{status:429}); const b=await req.json(); const db=readDB(); const u=db.users.find((x:any)=>x.email===String(b.email||'').toLowerCase()); if(!u||!verifyPw(b.password||'',u.passwordHash)) return NextResponse.json({error:'INVALID_CREDENTIALS'},{status:401}); createSession(u.id); return NextResponse.json({user:{id:u.id,name:u.name,email:u.email,role:u.role,membership:u.membership}})}
