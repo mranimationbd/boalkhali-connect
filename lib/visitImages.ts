@@ -1,0 +1,1 @@
+import {VISIT_IMG_HERO} from './visitImgHero'; import {VISIT_IMG_HILL} from './visitImgHill'; import {VISIT_IMG_HAAT} from './visitImgHaat'; export const VISIT_IMAGES: Record<string,string> = {hero: VISIT_IMG_HERO, hill: VISIT_IMG_HILL, haat: VISIT_IMG_HAAT};

@@ -1,1 +1,1 @@
-import {MetadataRoute} from 'next'; export default function s():MetadataRoute.Sitemap{return ['','/categories','/restaurants','/jobs','/blood','/emergency'].map(p=>({url:'http://localhost:3100'+p,lastModified:new Date()}))}
+import {MetadataRoute} from 'next'; export default function s():MetadataRoute.Sitemap{return ['','/categories','/restaurants','/jobs','/blood','/emergency','/boalkhali'].map(p=>({url:'http://localhost:3100'+p,lastModified:new Date()}))}

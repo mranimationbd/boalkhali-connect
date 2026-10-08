@@ -80,6 +80,14 @@ export default async function Home(){ const db=await readDBAsync(); const u=awai
   <SectionTitle title="🍴 রেস্টুরেন্ট ও খাবার" sub="বোয়ালখালীর স্পেশাল স্বাদ" href="/restaurants" linkLabel="সব দেখুন →"/>
   <div className="mt-3 grid gap-3 md:grid-cols-2">{db.restaurants.map((r:any)=>(<Link key={r.id} href="/restaurants" className="block overflow-hidden rounded-2xl bg-white shadow press">{r.image?<img src={r.image} alt={r.name} loading="lazy" className="h-32 w-full object-cover"/>:<div className="grid h-32 w-full place-items-center bg-orange-100 text-4xl">🍽️</div>}<div className="p-3"><span className="chip bg-orange-100 text-orange-700">{r.category}</span> <span className="chip bg-emerald-100">{r.price}</span><p className="font-bold">{r.name}</p><p className="text-xs text-gray-500">📍 {r.location}</p></div></Link>))}</div>
  </section>
+ {/* KNOW BOALKHALI */}
+ <section>
+  <Link href="/boalkhali" className="card lift press group flex items-center gap-4 !p-4 md:!p-5">
+   <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-600 text-3xl" aria-hidden="true">🏞️</span>
+   <span className="min-w-0 flex-1"><b className="font-display block text-base leading-snug md:text-lg">বোয়ালখালীকে জানুন</b><span className="mt-0.5 block text-xs leading-relaxed text-gray-500 md:text-sm">দর্শনীয় স্থান, ইতিহাস, হাট-বাজার ও যাতায়াত — যাচাইকৃত তথ্যে আমাদের উপজেলা</span></span>
+   <span className="chip shrink-0 bg-brand-800 text-white">ঘুরে দেখুন →</span>
+  </Link>
+ </section>
  {/* 7. CTA BAND */}
  <section className="items-center justify-between gap-4 rounded-[28px] bg-gradient-to-br from-emerald-800 to-emerald-600 p-5 text-white md:flex md:p-6">
   <div><h3 className="font-display text-xl font-black">আপনার ব্যবসা বা সেবা সবার কাছে পৌঁছে দিন</h3><p className="mt-1 text-sm text-emerald-100">আজই একটি পোস্ট দিন — বোয়ালখালীর ক্রেতা ও গ্রাহকের কাছে পৌঁছান সহজে 🌱</p></div>
