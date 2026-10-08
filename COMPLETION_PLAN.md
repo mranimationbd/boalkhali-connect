@@ -6,10 +6,10 @@ Research basis: feature patterns of Bikroy, Facebook Marketplace, Nextdoor, Thul
 Register/login (email+phone+Google, real Firebase verification email), full registration details + Google profile completion, admin/admin + in-panel credential change, moderation queue (approve/reject/hide/feature/verify/delete), feature toggles, 5GB upload quota, Firestore persistence, 19 categories, saved posts, notifications + settings toggles, blood board + donor search, complaints submit, anonymous secret desk, emergency directory, siren list, audit log, system health, analytics, JSON backup export, sitemap.
 
 ## Wave 1 — citizen post power
-- ⬜ My posts: edit, delete (confirm), mark sold/unavailable, status + rejection reason visible
-- ⬜ Moderation: reject requires reason; approve/reject creates user notification
-- ⬜ Post detail: Call + WhatsApp buttons, share (copy link), verified badge, report button → reports collection
-- ⬜ Comments/Q&A under posts (login required, own-comment delete)
+- ✅ My posts: edit, delete (confirm), mark sold/unavailable, status + rejection reason visible
+- ✅ Moderation: reject requires reason; approve/reject creates user notification
+- ✅ Post detail: Call + WhatsApp buttons, share (copy link), verified badge, report button → reports collection
+- ✅ Comments/Q&A under posts (login required, own-comment delete)
 
 ## Wave 2 — account, blood, civic
 - ⬜ Change password in profile; "ভুলে গেছেন?" → Firebase password-reset email
