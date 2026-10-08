@@ -31,3 +31,35 @@ Firebase (env placeholders already in .env.example). Local VM keeps working eith
 ## What must NOT happen
 - Do not touch `mranimationbd.duckdns.org` or its GitHub Pages repo (yesterday's Mr. Animation BD website).
 - Do not claim the DuckDNS URL is live until step 6 verification passes (user's NO FAKE SUCCESS rule).
+
+## Firebase (Firestore DB + Auth) — added 2026-10-08
+Live project (browser-verified 2026-10-08): Firebase project `boalkhali-connect-42819` (Spark $0). Firestore
+(default) LIVE in location nam5, Production rules locked (deny-all client access; the app reaches it only through
+firebase-admin server-side, which bypasses rules). Firebase Authentication: Email/Password + Google providers
+ENABLED. Web app config (public identifiers, also in .env.example): apiKey AIzaSyAxyqzBhUivN5UrKRZJKQJqkkiJIbNLDo4,
+authDomain boalkhali-connect-42819.firebaseapp.com, projectId boalkhali-connect-42819, appId
+1:1025376141258:web:71373f78899d6785b8d933. Remaining manual step: generate a service-account private key in
+Firebase Console → Project settings → Service accounts and put FIREBASE_PROJECT_ID (=boalkhali-connect-42819),
+FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY ONLY in the host env (Netlify) — never in git/chat.
+Backend selection (lib/db.ts): if FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY are ALL set,
+the app stores its whole DB state in Firestore document `bk_state/main` (field `json`); otherwise it uses the local
+file (data/db.json, or /tmp on serverless). firebase-admin is lazy-loaded server-side only; with no credentials the
+file path is used and firebase-admin is never imported — local dev/tests need no Firebase.
+
+Where to get the 3 server values: Firebase Console → (project) → Project settings → Service accounts →
+"Generate new private key" → in the downloaded JSON find: project_id → FIREBASE_PROJECT_ID, client_email →
+FIREBASE_CLIENT_EMAIL, private_key → FIREBASE_PRIVATE_KEY (paste with \n escapes intact; the code converts them).
+Put them ONLY in the host's env settings (e.g. Netlify → Site configuration → Environment variables). Never commit
+them, never paste in chat/memory.
+
+Auth: browser Firebase Auth (Google sign-in + email verification mails) activates only when NEXT_PUBLIC_FIREBASE_*
+web config is set (Firebase Console → Project settings → Your apps → Web app). Email verification emails are then
+sent by Firebase itself. Phone login = phone+password against the profile (no SMS OTP provider). Without the
+NEXT_PUBLIC_ config, the Google buttons are hidden and local email/phone+password auth is used.
+
+Admin login: username `admin` (or the admin email) + password = ADMIN_PASSWORD env at seed time, default `admin`
+on fresh seeds. Change later inside Admin → Settings → "অ্যাডমিন লগইন পরিবর্তন" (POST /api/admin/credentials,
+audit-logged). NOTE: an already-seeded DB keeps its old admin password until the DB is reset/re-seeded.
+
+Growth note: bk_state/main holds the entire DB JSON (~22KB now). Firestore's 1MB document limit means this single-doc
+design must be revisited (split collections) well before the state approaches ~800KB.

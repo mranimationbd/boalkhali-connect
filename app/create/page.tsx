@@ -1,4 +1,4 @@
-'use client'; import {Shell} from '@/components/ui'; import {readDB} from '@/lib/db'; import {useState,useEffect} from 'react';
+'use client'; import {Shell} from '@/components/ui'; import {useState,useEffect} from 'react';
 export default function P(){const [cats,setCats]=useState<any[]>([]); const [msg,setMsg]=useState(''); const [img,setImg]=useState('');
  useEffect(()=>{fetch('/api/posts').then(()=>{}); setCats(JSON.parse(document.getElementById('cats')?.textContent||'[]'))},[]);
  return <Shell><main className="max-w-2xl mx-auto p-4"><form className="space-y-4" onSubmit={async(e)=>{e.preventDefault(); const f=new FormData(e.currentTarget); const body=Object.fromEntries(f); (body as any).image=img; const r=await fetch('/api/posts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const j=await r.json(); setMsg(r.ok?'✅ পোস্ট জমা হয়েছে — মডারেশন PENDING':('❌ '+j.error+' (লগইন প্রয়োজন হলে /login)'))}}>
