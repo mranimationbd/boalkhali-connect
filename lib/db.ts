@@ -1,6 +1,7 @@
 import fs from 'fs'; import path from 'path'; import crypto from 'crypto';
-export const DB_PATH=process.env.DB_PATH||path.join(process.cwd(),'data','db.json');
-export const UPLOAD_DIR=process.env.UPLOAD_DIR||path.join(process.cwd(),'public','uploads');
+const ON_VERCEL=!!process.env.VERCEL;
+export const DB_PATH=process.env.DB_PATH||(ON_VERCEL?'/tmp/boalkhali-db.json':path.join(process.cwd(),'data','db.json'));
+export const UPLOAD_DIR=process.env.UPLOAD_DIR||(ON_VERCEL?'/tmp/boalkhali-uploads':path.join(process.cwd(),'public','uploads'));
 export const UPLOAD_QUOTA_BYTES=Math.floor((Number(process.env.UPLOAD_QUOTA_GB)||5)*1024*1024*1024); // posting uploads quota: 5 GB (user, 2026-10-08)
 export function uploadUsageBytes(){ try{ return fs.readdirSync(UPLOAD_DIR).reduce((a,f)=>{try{return a+fs.statSync(path.join(UPLOAD_DIR,f)).size}catch{return a}},0);}catch{return 0} }
 export type Role='CITIZEN'|'BUSINESS'|'SERVICE_PROVIDER'|'MODERATOR'|'ADMIN'|'SUPER_ADMIN';

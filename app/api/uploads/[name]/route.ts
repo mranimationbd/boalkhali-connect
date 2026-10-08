@@ -1,0 +1,4 @@
+export const dynamic='force-dynamic';
+import {NextResponse} from 'next/server'; import fs from 'fs'; import path from 'path'; import {UPLOAD_DIR} from '@/lib/db';
+const TYPES:any={'.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp'};
+export async function GET(_req:Request,{params}:{params:{name:string}}){ const name=path.basename(params.name); const ext=path.extname(name).toLowerCase(); if(!TYPES[ext]) return NextResponse.json({error:'NOT_FOUND'},{status:404}); const candidates=[path.join(UPLOAD_DIR,name),path.join(process.cwd(),'public','uploads',name)]; const file=candidates.find(f=>fs.existsSync(f)); if(!file) return NextResponse.json({error:'NOT_FOUND'},{status:404}); const buf=fs.readFileSync(file); return new NextResponse(buf,{headers:{'content-type':TYPES[ext],'cache-control':'public, max-age=86400'}}); }
