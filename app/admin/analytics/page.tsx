@@ -1,6 +1,6 @@
 import {readDBAsync} from '@/lib/db'; import {requireAdminPage} from '@/lib/auth'; import {bn} from '@/components/ui'; export const dynamic='force-dynamic';
 const dayKey=(d:Date)=>d.toISOString().slice(0,10);
-export default async function P(){ await requireAdminPage();const db=await readDBAsync(); const visits:Array<any>=db.visits||[]; const stats:any=db.visitStats&&typeof db.visitStats==='object'?db.visitStats:{total:0,byDay:{}}; const today=dayKey(new Date()); let last7=0; for(let i=0;i<7;i++){ last7+=stats.byDay[dayKey(new Date(Date.now()-i*86400000))]||0; }
+export default async function P(){ await requireAdminPage('analytics.view');const db=await readDBAsync(); const visits:Array<any>=db.visits||[]; const stats:any=db.visitStats&&typeof db.visitStats==='object'?db.visitStats:{total:0,byDay:{}}; const today=dayKey(new Date()); let last7=0; for(let i=0;i<7;i++){ last7+=stats.byDay[dayKey(new Date(Date.now()-i*86400000))]||0; }
  const devCount=(n:string)=>visits.filter(v=>v.device===n).length; const pct=(n:number)=>visits.length?Math.round(n/visits.length*100):0;
  const topPages=Object.entries(visits.reduce((a:any,v:any)=>{a[v.path]=(a[v.path]||0)+1;return a},{})).sort((a:any,b:any)=>b[1]-a[1]).slice(0,10);
  const cats=db.posts.reduce((a:any,p:any)=>{a[p.categorySlug]=(a[p.categorySlug]||0)+1;return a},{}); const totalViews=db.posts.reduce((a:any,p:any)=>a+(p.views||0),0);

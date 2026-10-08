@@ -1,0 +1,9 @@
+import Link from 'next/link'; import {requireAdminPage} from '@/lib/auth'; import {ROLE_PERMISSIONS,PERMISSION_LABELS,ROLE_LABELS} from '@/lib/permissions'; import LogoutBtn from './LogoutBtn'; export const dynamic='force-dynamic';
+// অ্যাডমিন প্রোফাইল: administrative account/security info only — not a public social profile.
+const fmt=(s:any)=>s?new Date(s).toLocaleString('bn-BD'):'—';
+export default async function P(){ const u=await requireAdminPage(); const perms=ROLE_PERMISSIONS[u.role]||[];
+ return <div><h1 className="font-black text-xl">👤 অ্যাডমিন প্রোফাইল</h1><p className="text-sm text-gray-500">আপনার প্রশাসনিক অ্যাকাউন্ট ও অনুমতির সারাংশ।</p>
+ <div className="card mt-4 space-y-2"><p><span className="text-gray-500 text-sm">নাম:</span> <b>{u.name}</b></p><p><span className="text-gray-500 text-sm">ইমেইল:</span> <b>{u.email}</b></p><p><span className="text-gray-500 text-sm">রোল:</span> <span className="chip bg-emerald-100">{ROLE_LABELS[u.role]||u.role}</span></p><p><span className="text-gray-500 text-sm">সদস্য হয়েছেন:</span> <b>{fmt(u.createdAt)}</b></p><p><span className="text-gray-500 text-sm">অ্যাকাউন্ট যাচাই:</span> <b>{u.verified?'হ্যাঁ':'না'}</b></p></div>
+ <div className="card mt-3"><h2 className="font-black">আমার অনুমতিসমূহ ({perms.length}টি)</h2><div className="flex flex-wrap gap-1.5 mt-2">{perms.map(p=>(<span key={p} className="chip bg-emerald-100">{PERMISSION_LABELS[p]||p}</span>))}</div>{!perms.length&&<p className="text-sm text-gray-500 mt-2">কোনো প্রশাসনিক অনুমতি নেই</p>}</div>
+ <div className="flex flex-wrap gap-2 mt-4"><Link href="/profile" className="btn">🔑 পাসওয়ার্ড পরিবর্তন (প্রোফাইলে)</Link><LogoutBtn/></div>
+ <p className="text-xs text-gray-400 mt-3">দ্রষ্টব্য: এটি প্রশাসনিক প্রোফাইল — পাবলিক প্রোফাইলে যেতে সাইডবারের "🌐 পাবলিক সাইট দেখুন" ব্যবহার করুন।</p></div>; }

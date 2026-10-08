@@ -1,2 +1,2 @@
 export const dynamic='force-dynamic';
-import {NextResponse} from 'next/server'; import {cookies} from 'next/headers'; export async function POST(){cookies().delete('sc_session'); return NextResponse.json({ok:true})}
+import {NextResponse} from 'next/server'; import {cookies} from 'next/headers'; import {readDBAsync,writeDBAsync} from '@/lib/db'; export async function POST(){ const sid=cookies().get('sc_session')?.value; if(sid){ try{ const db=await readDBAsync(); const n=db.sessions.length; db.sessions=db.sessions.filter((s:any)=>s.id!==sid); if(db.sessions.length!==n) await writeDBAsync(db); }catch{} } cookies().delete('sc_session'); return NextResponse.json({ok:true}) }
