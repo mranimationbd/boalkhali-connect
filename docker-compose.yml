@@ -1,0 +1,6 @@
+services:
+  app:
+    build: .
+    ports: ["3100:3100"]
+    environment: [ADMIN_EMAIL, ADMIN_PASSWORD, SESSION_SECRET, NEXT_PUBLIC_APP_URL]
+    volumes: [./data:/app/data, ./public/uploads:/app/public/uploads]

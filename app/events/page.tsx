@@ -1,0 +1,1 @@
+import {Shell} from '@/components/ui'; export default function P(){return <Shell><main className="max-w-3xl mx-auto p-4"><h1 className="font-black text-xl">অনুষ্ঠান ও ডেকোর</h1>{['বিয়ে','ডেকোরেশন','ফটোগ্রাফি','সাউন্ড','লাইটিং','ইভেন্ট ম্যানেজমেন্ট'].map(x=><div key={x} className="card mb-2 font-bold">{x}</div>)}</main></Shell>}

@@ -1,0 +1,1 @@
+import {Shell} from '@/components/ui'; export default function P(){return <Shell><main className="max-w-3xl mx-auto p-4"><h1 className="font-black text-xl">আইনগত সহায়তা</h1><div className="card">অ্যাডভোকেট মো. রফিকুল ইসলাম — সিভিল ও ক্রিমিনাল — বোয়ালখালী কোর্ট — 01710000020 ✅ ভেরিফাইড</div></main></Shell>}

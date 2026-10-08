@@ -1,0 +1,5 @@
+# Boalkhali Connect — replace with your DuckDNS hostname after creation
+boalkhali.duckdns.org {
+  reverse_proxy 127.0.0.1:3100
+  encode gzip
+}
