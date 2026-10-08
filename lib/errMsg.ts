@@ -1,0 +1,47 @@
+// সার্ভার এরর কোড → বন্ধুসুলভ বাংলা বার্তা (নাগরিকদের কখনো কাঁচা ইংরেজি কোড দেখাবে না)
+export const ERR_MSG: Record<string, string> = {
+  INVALID_CREDENTIALS: 'এই অ্যাকাউন্ট খুঁজে পাওয়া যায়নি — দয়া করে রেজিস্ট্রেশন করুন',
+  ACCOUNT_BLOCKED: 'এই অ্যাকাউন্টটি বন্ধ করা হয়েছে — সহায়তার জন্য আমাদের সাথে যোগাযোগ করুন',
+  RATE_LIMIT: 'অনেকবার ভুল চেষ্টা হয়েছে — কিছুক্ষণ পরে আবার চেষ্টা করুন',
+  EXISTS: 'এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট খোলা আছে — লগইন করুন',
+  PHONE_EXISTS: 'এই মোবাইল নম্বর দিয়ে আগেই অ্যাকাউন্ট খোলা আছে — লগইন করুন',
+  INVALID_PHONE: 'সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন (01 দিয়ে শুরু)',
+  USER_NOT_FOUND: 'অ্যাকাউন্ট পাওয়া যায়নি',
+  NOT_FOUND: 'খুঁজে পাওয়া যায়নি',
+  POST_NOT_FOUND: 'পোস্টটি পাওয়া যায়নি',
+  LOGIN_REQUIRED: 'আগে লগইন করুন',
+  LOGIN: 'আগে লগইন করুন',
+  FORBIDDEN: 'এই কাজটি করার অনুমতি আপনার নেই',
+  WRONG_CURRENT_PASSWORD: 'বর্তমান পাসওয়ার্ডটি ভুল হয়েছে',
+  INVALID_CURRENT_PASSWORD: 'বর্তমান পাসওয়ার্ডটি ভুল হয়েছে',
+  GOOGLE_ACCOUNT_NO_PASSWORD: 'এই অ্যাকাউন্ট Google দিয়ে তৈরি — পাসওয়ার্ড বদলানোর দরকার নেই',
+  PASSWORD_SHORT: 'পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে',
+  PASSWORD_SAME: 'নতুন পাসওয়ার্ড পুরনোটির চেয়ে আলাদা হতে হবে',
+  PASSWORD_MISMATCH: 'দুইবার দেওয়া পাসওয়ার্ড মিলছে না',
+  NAME_REQUIRED: 'পুরো নাম দিন',
+  INVALID_EMAIL: 'সঠিক ইমেইল ঠিকানা দিন',
+  AREA_REQUIRED: 'এলাকা নির্বাচন করুন',
+  LOCATION_REQUIRED: 'এলাকা বা অবস্থান দিন',
+  DESC_REQUIRED: 'বিবরণ লিখুন',
+  TITLE_REQUIRED: 'শিরোনাম লিখুন',
+  TEXT_REQUIRED: 'লেখা লিখুন',
+  REASON_REQUIRED: 'কারণ লিখুন',
+  INVALID_BLOOD_GROUP: 'সঠিক রক্তের গ্রুপ নির্বাচন করুন',
+  INVALID_PRICE: 'সঠিক দাম লিখুন',
+  FEATURE_DISABLED: 'এই সেবাটি আপাতত বন্ধ আছে — পরে আবার চেষ্টা করুন',
+  NO_FILE: 'ছবি নির্বাচন করুন',
+  TYPE_NOT_ALLOWED_JPG_PNG_WEBP: 'শুধু JPG, PNG বা WEBP ছবি আপলোড করা যাবে',
+  INVALID_TOKEN: 'লিংকটির মেয়াদ শেষ বা ভুল হয়েছে — আবার চেষ্টা করুন',
+  NO_TOKEN: 'আগে লগইন করুন',
+  NO_EMAIL: 'ইমেইল ঠিকানা পাওয়া যায়নি',
+  FIREBASE_NOT_CONFIGURED: 'এই লগইন পদ্ধতিটি আপাতত চালু নেই — ইমেইল/মোবাইল দিয়ে লগইন করুন',
+  INVALID_JSON: 'তথ্য পাঠানো যায়নি — আবার চেষ্টা করুন',
+  INVALID_ACTION: 'এই কাজটি করা যাচ্ছে না',
+  INVALID_ROLE: 'অ্যাকাউন্টের ধরন সঠিক নয়',
+  NOTHING_TO_CHANGE: 'কোনো পরিবর্তন দেওয়া হয়নি',
+};
+export function errMsg(code?: string | null): string {
+  if (!code) return 'দুঃখিত, কিছু সমস্যা হয়েছে — আবার চেষ্টা করুন';
+  return ERR_MSG[code] || 'দুঃখিত, কিছু সমস্যা হয়েছে — আবার চেষ্টা করুন';
+}
+export default errMsg;

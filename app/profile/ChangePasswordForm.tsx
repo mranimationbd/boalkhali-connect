@@ -1,0 +1,9 @@
+'use client'; import {useState} from 'react'; import {errMsg} from '@/lib/errMsg';
+export default function ChangePasswordForm(){const [msg,setMsg]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
+ const submit=async(ev:any)=>{ev.preventDefault(); setErr(''); setMsg(''); const f=new FormData(ev.currentTarget); const currentPassword=String(f.get('currentPassword')||''); const newPassword=String(f.get('newPassword')||''); const confirm=String(f.get('confirmPassword')||''); if(newPassword.length<6){setErr('নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে'); return;} if(newPassword!==confirm){setErr('নতুন পাসওয়ার্ড দুবার মিলছে না'); return;} setBusy(true); try{const r=await fetch('/api/auth/change-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({currentPassword,newPassword})}); const j=await r.json(); if(!r.ok){setErr(errMsg(j.error)); return;} setMsg('পাসওয়ার্ড পরিবর্তন হয়েছে'); ev.currentTarget.reset();}catch{setErr('পাসওয়ার্ড পরিবর্তন করা যায়নি, আবার চেষ্টা করুন');}finally{setBusy(false);}};
+ return <form onSubmit={submit} className="card mt-3 text-left"><h2 className="font-black">পাসওয়ার্ড পরিবর্তন</h2>
+ <label className="block text-sm font-bold mt-3">বর্তমান পাসওয়ার্ড</label><input name="currentPassword" type="password" required autoComplete="current-password"/>
+ <label className="block text-sm font-bold mt-3">নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)</label><input name="newPassword" type="password" required autoComplete="new-password"/>
+ <label className="block text-sm font-bold mt-3">নতুন পাসওয়ার্ড আবার দিন</label><input name="confirmPassword" type="password" required autoComplete="new-password"/>
+ {err&&<p className="text-red-600 text-sm mt-2">{err}</p>}{msg&&<p className="text-emerald-700 text-sm mt-2">{msg}</p>}
+ <button className="btn w-full mt-3" disabled={busy}>{busy?'পরিবর্তন হচ্ছে…':'পাসওয়ার্ড পরিবর্তন করুন'}</button></form>}

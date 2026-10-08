@@ -1,27 +1,12 @@
-// Category icons: Google Noto Emoji PNG artwork in public/cat-icons/<slug>.png
-// (emoji_u<codepoint>.png from github.com/googlefonts/noto-emoji, 512px).
-// catIcon returns the PNG path, or undefined so callers can fall back to the emoji char.
-export const CAT_ICONS: Record<string, string> = {
-  house: '/cat-icons/house.png',
-  market: '/cat-icons/market.png',
-  doctor: '/cat-icons/doctor.png',
-  blood: '/cat-icons/blood.png',
-  secret: '/cat-icons/secret.png',
-  food: '/cat-icons/food.png',
-  transport: '/cat-icons/transport.png',
-  jobs: '/cat-icons/jobs.png',
-  lost: '/cat-icons/lost.png',
-  legal: '/cat-icons/legal.png',
-  event: '/cat-icons/event.png',
-  electrician: '/cat-icons/electrician.png',
-  plumber: '/cat-icons/plumber.png',
-  ac: '/cat-icons/ac.png',
-  driver: '/cat-icons/driver.png',
-  tutor: '/cat-icons/tutor.png',
-  vet: '/cat-icons/vet.png',
-  mason: '/cat-icons/mason.png',
-  mobile: '/cat-icons/mobile.png',
-};
+// Category icons: Google Noto Emoji PNG artwork shipped as inline data URIs
+// (lib/catIconDataA/B/C.ts, 128px) so icons travel as text — binary upload to
+// GitHub corrupted PNGs, data URIs do not. catIcon returns a data: URI, or
+// undefined so callers can fall back to the emoji char.
+import { CAT_ICON_DATA as ICON_A } from './catIconDataA';
+import { CAT_ICON_DATA as ICON_B } from './catIconDataB';
+import { CAT_ICON_DATA as ICON_C } from './catIconDataC';
+
+export const CAT_ICONS: Record<string, string> = { ...ICON_A, ...ICON_B, ...ICON_C };
 
 export const CAT_EMOJI: Record<string, string> = {
   house: '🏠',
