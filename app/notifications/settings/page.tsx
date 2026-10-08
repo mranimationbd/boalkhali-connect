@@ -1,0 +1,6 @@
+import {Shell} from '@/components/ui'; import {currentUser} from '@/lib/auth'; import Link from 'next/link'; import {BellRing} from 'lucide-react'; import PrefsForm,{NotifPrefs} from './PrefsForm'; export const dynamic='force-dynamic';
+const DEFAULTS:NotifPrefs={all:true,emergency:true,blood:true,newPosts:true};
+export default async function P(){ const u=await currentUser();
+ if(!u) return <Shell><main className="max-w-3xl mx-auto p-4"><h1 className="font-black text-xl flex items-center gap-2"><BellRing className="text-emerald-700"/>নোটিফিকেশন সেটিংস</h1><div className="card mt-3 text-center"><p className="font-bold">নোটিফিকেশন সেটিংস দেখতে লগইন করুন</p><p className="text-sm text-gray-500 mt-1">কোন কোন বিষয়ে নোটিফিকেশন পাবেন, তা ঠিক করতে আপনার অ্যাকাউন্টে লগইন করা প্রয়োজন।</p><Link href="/login" className="btn mt-3">লগইন করুন</Link></div></main></Shell>;
+ const initial:NotifPrefs={...DEFAULTS,...(u.notifPrefs||{})};
+ return <Shell><main className="max-w-3xl mx-auto p-4"><h1 className="font-black text-xl flex items-center gap-2"><BellRing className="text-emerald-700"/>নোটিফিকেশন সেটিংস</h1><p className="text-sm text-gray-500 mt-1">কোন কোন বিষয়ে নোটিফিকেশন পেতে চান, সুইচ দিয়ে বেছে নিন — তারপর সংরক্ষণ করুন।</p><PrefsForm initial={initial}/></main></Shell> }
