@@ -1,8 +1,8 @@
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev || npm install --omit=dev
+RUN npm ci || npm install
 COPY . .
 RUN npm run build
-EXPOSE 3100
-CMD ["npm","start"]
+EXPOSE 10000
+CMD ["sh", "-c", "npx next start -p ${PORT:-3100} -H 0.0.0.0"]
