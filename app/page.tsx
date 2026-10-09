@@ -58,10 +58,10 @@ export default async function Home(){ const db=await readDBAsync(); const u=awai
  <section>
   <SectionTitle title="মূল ক্যাটাগরিসমূহ" sub="ক্লিক করে বিস্তারিত দেখুন" href="/categories" linkLabel="সব দেখুন ›"/>
   <div className="mt-3 grid grid-cols-4 gap-2 md:gap-3 md:grid-cols-4">
-   {ranked.map((c:any,i:number)=>{const color=c.color||'#0a7a54'; const metric=c.slug==='blood'?(donors>0?bn(donors)+' জন দাতা প্রস্তুত':''):(countOf[c.slug]?bn(countOf[c.slug])+'টি পোস্ট':''); const feat=i<2; return <Link key={c.slug} href={`/category/${c.slug}`} className={`card lift press !p-3 md:!p-4 ${feat?'col-span-2':''}`}>
-    <div className={`flex ${feat?'items-center gap-2 md:gap-4 text-left':'flex-col items-center gap-1.5 md:gap-2 text-center'}`}>
+   {ranked.map((c:any)=>{const color=c.color||'#0a7a54'; const metric=c.slug==='blood'?(donors>0?bn(donors)+' জন দাতা প্রস্তুত':''):(countOf[c.slug]?bn(countOf[c.slug])+'টি পোস্ট':''); return <Link key={c.slug} href={`/category/${c.slug}`} className="card lift press !p-3 md:!p-4">
+    <div className="flex flex-col items-center gap-1.5 text-center md:gap-2">
      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl md:h-16 md:w-16" style={{background:color+'1f'}}>{catIcon(c.slug)?<img src={catIcon(c.slug)} alt={c.name} className="h-9 w-9 object-contain md:h-12 md:w-12"/>:<span className="text-2xl md:text-3xl">{catEmoji(c.slug)}</span>}</div>
-     <div><p className={`font-bold ${feat?'text-sm md:text-base':'text-xs md:text-sm'}`}>{c.name}</p>{metric&&<p className="num mt-0.5 text-[11px] font-bold" style={{color}}>{metric}</p>}</div>
+     <div><p className="text-xs font-bold md:text-sm">{c.name}</p>{metric&&<p className="num mt-0.5 text-[11px] font-bold" style={{color}}>{metric}</p>}</div>
     </div>
    </Link>})}
   </div>
