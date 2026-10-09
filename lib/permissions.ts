@@ -3,10 +3,10 @@
 // APIs keep their requireRole lists, aligned to these assignments (no widening).
 export const ALL_PERMISSIONS=['dashboard.view','users.view','users.manage','business.manage','content.moderate','approvals.view','reports.view','reports.manage','secret.view','blood.manage','ads.manage','broadcast.send','siren.manage','transport.manage','volunteers.manage','categories.manage','analytics.view','analytics.ip.view','analytics.ip.export','health.view','audit.view','roles.manage','export.data','settings.manage'];
 export const ROLE_PERMISSIONS:Record<string,string[]>={ SUPER_ADMIN:[...ALL_PERMISSIONS],
- // roles.manage (রোল ও নিরাপত্তা) and export.data (full DB dump incl. password hashes) are SUPER_ADMIN-only.
- // analytics.ip.* (raw visitor IP logs, §41) are intentionally NOT granted to ADMIN by default —
- // an authorized grant is added here explicitly; SUPER_ADMIN always has both.
- ADMIN:ALL_PERMISSIONS.filter(p=>p!=='roles.manage'&&p!=='export.data'&&p!=='analytics.ip.view'&&p!=='analytics.ip.export'),
+ // roles.manage (রোল ও নিরাপত্তা) and export.data (full DB dump incl. password hashes) stay SUPER_ADMIN-only.
+ // analytics.ip.view/export ARE granted to ADMIN by explicit owner order (2026-10-09 feedback F1:
+ // the owner runs the panel as `admin` and must see/export the raw visitor IP log).
+ ADMIN:ALL_PERMISSIONS.filter(p=>p!=='roles.manage'&&p!=='export.data'),
  MODERATOR:['dashboard.view','content.moderate','approvals.view','reports.view','blood.manage','analytics.view'],
  CITIZEN:[],BUSINESS:[],SERVICE_PROVIDER:[] };
 export function hasPermission(role:string,perm:string){ return (ROLE_PERMISSIONS[role]||[]).includes(perm); }
