@@ -24,6 +24,7 @@ export const ERR_MSG: Record<string, string> = {
   LOCATION_REQUIRED: 'এলাকা বা অবস্থান দিন',
   DESC_REQUIRED: 'বিবরণ লিখুন',
   TITLE_REQUIRED: 'শিরোনাম লিখুন',
+  MAINTENANCE: 'সাইট রক্ষণাবেক্ষণ চলছে — সাময়িকভাবে নতুন পোস্ট বন্ধ আছে',
   TEXT_REQUIRED: 'লেখা লিখুন',
   REASON_REQUIRED: 'কারণ লিখুন',
   INVALID_BLOOD_GROUP: 'সঠিক রক্তের গ্রুপ নির্বাচন করুন',

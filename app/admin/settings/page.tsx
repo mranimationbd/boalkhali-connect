@@ -1,2 +1,2 @@
-import {requireAdminPage} from '@/lib/auth'; import {readDBAsync} from '@/lib/db'; import Client from './Client'; export const dynamic='force-dynamic';
-export default async function P(){ await requireAdminPage('settings.manage'); const db=await readDBAsync(); const initial:Record<string,boolean>={}; for(const f of (db.feature_flags||[])) initial[f.categorySlug]=!!f.enabled; return <Client initial={initial}/>; }
+import {requireAdminPage} from '@/lib/auth'; import {readDBAsync,SETTINGS_DEFAULTS} from '@/lib/db'; import Client from './Client'; export const dynamic='force-dynamic';
+export default async function P(){ await requireAdminPage('settings.manage'); const db=await readDBAsync(); const initial:Record<string,boolean>={}; for(const f of (db.feature_flags||[])) initial[f.categorySlug]=!!f.enabled; const settings={...SETTINGS_DEFAULTS,...(db.settings||{})}; return <Client initial={initial} settings={settings}/>; }

@@ -2,15 +2,8 @@ import Link from 'next/link'; import {MapPin,BadgeCheck} from 'lucide-react'; im
 export {BottomNav};
 export const bn=(n:any)=>String(n??'').replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[+d]);
 export function CatIcon({name,color}:{name:string,color:string}){return <div style={{background:color+'18',color}} className="w-14 h-14 rounded-full grid place-items-center text-2xl font-bold">{name.slice(0,1)}</div>}
-/* 2.0 B2 — premium footer (citizen Shell pages only; admin has its own chrome) */
-export function Footer(){const year=bn(new Date().getFullYear()); const links:[string,string][]=[['/categories','ক্যাটাগরিসমূহ'],['/emergency','জরুরি সেবা'],['/blood','রক্তদান'],['/doctors','ডাক্তার ডিরেক্টরি'],['/volunteers','স্বেচ্ছাসেবীবৃন্দ'],['/boalkhali','বোয়ালখালীকে জানুন'],['/complaint','অভিযোগ জানান'],['/about','নির্মাতা ও পরিচিতি']];
- return <footer className="mt-12 border-t border-[var(--line)] bg-[var(--surface)]"><div className="mx-auto max-w-5xl px-4 py-6">
-  <div className="flex items-center gap-3"><img src={LOGO_DATA} alt="বোয়ালখালী কানেক্ট লোগো" className="h-10 w-10 rounded-xl shrink-0"/><div><b className="font-display">বোয়ালখালী কানেক্ট</b><p className="text-[11px] text-gray-500">বোয়ালখালী শহরের ডিজিটাল সিটিজেন প্ল্যাটফর্ম</p></div></div>
-  <VisitorCounter/>
-  <nav aria-label="ফুটার লিংক" className="mt-4 flex flex-wrap gap-x-4 gap-y-2">{links.map(([h,l])=>(<Link key={h} href={h} className="rounded px-0.5 text-sm text-[var(--ink-soft)] hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">{l}</Link>))}</nav>
-  <p className="mt-4 text-xs text-gray-400">নির্মাতা ও পরিচালক: MD. Habibur Rahman</p>
-  <p className="text-xs text-gray-400">© {year} বোয়ালখালী কানেক্ট — সর্বস্বত্ব সংরক্ষিত</p>
- </div></footer>}
+/* Footer lives in components/Footer.tsx (client; brand from db.settings) — imported for Shell, re-exported for existing imports */
+import {Footer} from './Footer'; export {Footer};
 export function Shell({children}:{children:any}){return <div className="pb-24 md:pb-8"><Header/><VisitTracker/>{children}<Footer/><BottomNav/></div>}
 
 /* ---- 2.0 shared premium components (B1, server-component safe, no hooks) ---- */
