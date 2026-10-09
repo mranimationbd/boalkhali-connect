@@ -95,7 +95,7 @@ export default function BoalkhaliPage() {
    <div className="card mt-3 !p-4"><p className="text-xs font-bold text-gray-400">এলাকাসমূহ</p><div className="mt-2 flex flex-wrap gap-1.5">{UNIONS.map((u) => (<span key={u} className="chip bg-brand-50 text-brand-800">{u}</span>))}</div></div>
   </section>
   {/* (c) পর্যটন — ভিতরে */}
-  <section>
+  <section id="darshoniyo" className="scroll-mt-24">
    <SectionTitle title="🏞️ পর্যটন ও দর্শনীয় স্থান" sub="বোয়ালখালীর ভিতরের যাচাইকৃত গন্তব্য"/>
    <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{INSIDE.map((p) => (<PlaceCard key={p.name} p={p}/>))}</div>
   </section>
@@ -112,7 +112,7 @@ export default function BoalkhaliPage() {
    </div>
   </section>
   {/* (f) হাট-বাজার */}
-  <section>
+  <section id="haat" className="scroll-mt-24">
    <SectionTitle title="🧺 হাট-বাজার" sub="উপজেলার পরিচিত বাজারগুলো"/>
    <figure className="card mt-3 !p-0 overflow-hidden"><img src={VISIT_IMAGES.haat} alt="বোয়ালখালীর হাট-বাজার" loading="lazy" className="aspect-[21/9] w-full object-cover"/><figcaption className="bg-brand-50 px-3 py-1.5 text-[11px] text-brand-800">{CAP} — গ্রামীণ হাট-বাজার</figcaption></figure>
    <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -131,7 +131,7 @@ export default function BoalkhaliPage() {
    <p className="mt-2 text-xs text-gray-400">উপরের তালিকা প্রকাশিত সূত্র থেকে সংকলিত; প্রতিটি প্রতিষ্ঠানের হালনাগাদ তথ্য (সময়সূচি ও সেবা) যাচাই চলছে। জরুরি প্রয়োজনে <Link href="/emergency" className="font-bold text-brand-700 underline">জরুরি সেবা</Link> পেজ দেখুন।</p>
   </section>
   {/* (h) ইতিহাস ও বিখ্যাত ব্যক্তি */}
-  <section>
+  <section id="itihas" className="scroll-mt-24">
    <SectionTitle title="📜 ইতিহাস ও ঐতিহ্য" sub="বোয়ালখালীর গল্প"/>
    <div className="mt-3 grid gap-3 md:grid-cols-2">
     {HISTORY.map(([ic, h, t]) => (<div key={h} className="card lift !p-4"><p className="font-display font-bold"><span aria-hidden="true">{ic}</span> {h}</p><p className="mt-1.5 text-sm leading-relaxed text-gray-600">{t}</p></div>))}

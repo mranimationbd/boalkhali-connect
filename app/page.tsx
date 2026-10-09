@@ -1,4 +1,4 @@
-import Link from 'next/link'; import {readDBAsync} from '@/lib/db'; import {currentUser} from '@/lib/auth'; import {Shell,bn,PostCard,SectionTitle,EmptyState} from '@/components/ui'; import {catIcon,catEmoji} from '@/lib/catIcons'; import {Phone,Search,Plus,Grid3X3,Siren,Droplets,ClipboardList} from 'lucide-react';
+import Link from 'next/link'; import {readDBAsync} from '@/lib/db'; import {currentUser} from '@/lib/auth'; import {Shell,bn,PostCard,SectionTitle,EmptyState} from '@/components/ui'; import {catIcon,catEmoji} from '@/lib/catIcons'; import {VISIT_IMG_HERO} from '@/lib/visitImgHero'; import {Phone,Search,Plus,Grid3X3,Siren,Droplets,ClipboardList} from 'lucide-react';
 export const dynamic='force-dynamic';
 async function Weather(){ try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=22.382&longitude=91.921&current=temperature_2m,relative_humidity_2m,wind_speed_10m,visibility,weather_code&timezone=Asia%2FDhaka',{next:{revalidate:600}}); const j=await r.json(); const c=j.current; return <div className="card !bg-[#0b2e35] text-white"><div className="flex justify-between"><b>🌍 বোয়ালখালী আবহাওয়া ● লাইভ</b><span className="text-yellow-300 text-xs">আপডেট: {new Date(c.time).toLocaleTimeString('bn-BD')}</span></div><div className="text-5xl font-black my-3">{bn(Math.round(c.temperature_2m))}°<span className="text-yellow-400 text-2xl">C</span></div><p>আংশিক মেঘলা • অনুভূত: {bn(Math.round(c.temperature_2m))}°C</p><div className="grid grid-cols-3 gap-2 mt-3 text-center text-sm"><div className="bg-white/10 rounded-xl p-2">আর্দ্রতা<br/><b className="text-yellow-300">{bn(c.relative_humidity_2m)}%</b></div><div className="bg-white/10 rounded-xl p-2">বাতাস<br/><b className="text-yellow-300">{bn(c.wind_speed_10m)} কিমি</b></div><div className="bg-white/10 rounded-xl p-2">দৃশ্যমানতা<br/><b className="text-yellow-300">{bn(Math.round((c.visibility||8000)/1000))} কিমি</b></div></div><p className="text-[10px] opacity-60 mt-2">আবহাওয়া: Open-Meteo</p></div>}catch{return <div className="card">আবহাওয়া লোড হচ্ছে না — API unavailable</div>} }
 export default async function Home(){ const db=await readDBAsync(); const u=await currentUser(); const cats=db.categories.filter((c:any)=>c.enabled); const postsAll=db.posts.filter((p:any)=>p.status==='APPROVED'); const countOf:any={}; postsAll.forEach((p:any)=>{countOf[p.categorySlug]=(countOf[p.categorySlug]||0)+1}); const donors=(db.blood_donors||[]).filter((d:any)=>d.available!==false).length; const bloodReqs=(db.blood_requests||[]).filter((b:any)=>b.status==='OPEN'||b.status==='ACTIVE'); const blood=bloodReqs[0]; const alerts=(db.emergency_alerts||[]).filter((e:any)=>e.active); const anns=(db.announcements||[]).filter((a:any)=>a.active!==false).sort((a:any,b:any)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))); const ad=(db.advertisements||[]).find((a:any)=>a.status!=='HIDDEN'); const featured=postsAll.filter((p:any)=>p.promoted).slice(0,4); const latest=postsAll.slice(0,6); const ranked=[...cats].sort((a:any,b:any)=>(countOf[b.slug]||0)-(countOf[a.slug]||0)); const catNameOf:any=Object.fromEntries(cats.map((c:any)=>[c.slug,c.name])); const catColorOf:any=Object.fromEntries(cats.map((c:any)=>[c.slug,c.color]));
@@ -14,6 +14,20 @@ export default async function Home(){ const db=await readDBAsync(); const u=awai
    </div>
    <h1 className="font-display text-3xl md:text-5xl font-black leading-tight mt-4">বোয়ালখালীর সবকিছু,<br/>এখন এক জায়গায়।</h1>
    <p className="text-emerald-100 mt-2 md:text-lg">সেবা খুঁজুন • ব্যবসা খুঁজুন • সাহায্য নিন • তথ্য শেয়ার করুন</p>
+   {/* KNOW BOALKHALI — হিরোর একদম উপরে (ব্যবহারকারীর অনুরোধে মাঝের CTA কার্ড এখানে সরানো হয়েছে) */}
+   <div className="mt-5 flex flex-col gap-3 rounded-3xl border border-white/25 bg-white/10 p-3 backdrop-blur sm:flex-row sm:items-center">
+    <Link href="/boalkhali" className="shrink-0"><img src={VISIT_IMG_HERO} alt="কর্ণফুলীর তীরে বোয়ালখালীর প্রাকৃতিক দৃশ্য (প্রতীকী ছবি)" loading="lazy" className="h-28 w-full rounded-2xl object-cover sm:h-20 sm:w-36"/></Link>
+    <div className="min-w-0 flex-1">
+     <div className="flex flex-wrap items-center gap-2"><Link href="/boalkhali" className="font-display text-base font-bold leading-snug md:text-lg">বোয়ালখালীকে জানুন</Link><span className="chip bg-yellow-400 font-bold text-black">গাইড</span></div>
+     <p className="mt-0.5 text-xs leading-relaxed text-emerald-100/90 md:text-sm">কর্ণফুলীর তীরে আমাদের উপজেলা — দর্শনীয় স্থান, হাট-বাজার, ইতিহাস ও বিশিষ্ট ব্যক্তিত্ব, যাচাইকৃত তথ্যে</p>
+     <div className="mt-2 flex flex-wrap gap-1.5">
+      <Link href="/boalkhali#darshoniyo" className="chip border border-white/30 bg-white/10 text-white transition hover:bg-white/20">🏞️ দর্শনীয় স্থানসমূহ</Link>
+      <Link href="/boalkhali#haat" className="chip border border-white/30 bg-white/10 text-white transition hover:bg-white/20">🧺 হাট-বাজার</Link>
+      <Link href="/boalkhali#itihas" className="chip border border-white/30 bg-white/10 text-white transition hover:bg-white/20">📜 ইতিহাস ও বিশিষ্ট ব্যক্তিত্ব</Link>
+     </div>
+    </div>
+    <Link href="/boalkhali" className="btn shrink-0 !bg-white !text-emerald-800">বোয়ালখালীকে জানুন →</Link>
+   </div>
    <form action="/search" className="mt-5 flex max-w-2xl items-center rounded-full bg-white p-1.5 shadow-elev-2">
     <Search className="ml-3 shrink-0 text-emerald-700"/>
     <input name="q" placeholder="আপনি কী খুঁজছেন?" aria-label="খুঁজুন" className="!border-0 !bg-transparent text-[var(--ink)] placeholder:text-gray-400"/>
@@ -79,14 +93,6 @@ export default async function Home(){ const db=await readDBAsync(); const u=awai
  <section className="card !bg-orange-50">
   <SectionTitle title="🍴 রেস্টুরেন্ট ও খাবার" sub="বোয়ালখালীর স্পেশাল স্বাদ" href="/restaurants" linkLabel="সব দেখুন →"/>
   <div className="mt-3 grid gap-3 md:grid-cols-2">{db.restaurants.map((r:any)=>(<Link key={r.id} href="/restaurants" className="block overflow-hidden rounded-2xl bg-white shadow press">{r.image?<img src={r.image} alt={r.name} loading="lazy" className="h-32 w-full object-cover"/>:<div className="grid h-32 w-full place-items-center bg-orange-100 text-4xl">🍽️</div>}<div className="p-3"><span className="chip bg-orange-100 text-orange-700">{r.category}</span> <span className="chip bg-emerald-100">{r.price}</span><p className="font-bold">{r.name}</p><p className="text-xs text-gray-500">📍 {r.location}</p></div></Link>))}</div>
- </section>
- {/* KNOW BOALKHALI */}
- <section>
-  <Link href="/boalkhali" className="card lift press group flex items-center gap-4 !p-4 md:!p-5">
-   <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-600 text-3xl" aria-hidden="true">🏞️</span>
-   <span className="min-w-0 flex-1"><b className="font-display block text-base leading-snug md:text-lg">বোয়ালখালীকে জানুন</b><span className="mt-0.5 block text-xs leading-relaxed text-gray-500 md:text-sm">দর্শনীয় স্থান, ইতিহাস, হাট-বাজার ও যাতায়াত — যাচাইকৃত তথ্যে আমাদের উপজেলা</span></span>
-   <span className="chip shrink-0 bg-brand-800 text-white">ঘুরে দেখুন →</span>
-  </Link>
  </section>
  {/* 7. CTA BAND */}
  <section className="items-center justify-between gap-4 rounded-[28px] bg-gradient-to-br from-emerald-800 to-emerald-600 p-5 text-white md:flex md:p-6">
