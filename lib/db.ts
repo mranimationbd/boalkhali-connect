@@ -42,7 +42,7 @@ function _merge3(base:any,mine:any,cur:any):any{ const out:any={}; const keys=Ar
 let _fileQ:Promise<any>=Promise.resolve();
 function _withFileLock<T>(f:()=>Promise<T>):Promise<T>{ const run=_fileQ.then(f,f); _fileQ=run.then(()=>undefined,()=>undefined); return run; }
 // ---- per-record store for the hot collections ----
-export const HOT_COLLECTIONS=['users','posts','sessions','blood_requests','blood_donors','complaints','secret_reports','post_comments','saved_posts','content_types','contents'];
+export const HOT_COLLECTIONS=['users','posts','sessions','blood_requests','blood_donors','complaints','secret_reports','post_comments','saved_posts','content_types','contents','search_logs','business_verifications'];
 const _HOTSET=new Set(HOT_COLLECTIONS); const _isHot=(k:string)=>_HOTSET.has(k);
 const _recId=(r:any)=>(r&&typeof r==='object'&&r.id!==undefined&&r.id!==null)?String(r.id):null;
 const _cleanRec=(r:any)=>{ try{ return JSON.parse(JSON.stringify(r)); }catch{ return r; } };
@@ -124,7 +124,12 @@ function seedDB(){
  // real, callable contacts for a doctor, a critical patient and an "available now" donor. Fresh
  // databases now start honestly empty here; real entries come from admin import / citizen flows.
  db.emergency_alerts.push({id:'e1',title:'জরুরি সতর্কতা',body:'জরুরি প্রয়োজনে যোগাযোগ করুন',severity:'HIGH',active:true,createdAt:now()});
- db.advertisements.push({id:'ad1',title:'মেগা ফ্যাশন পয়েন্ট • ঈদ ও শীতের মেগা ছাড়',body:'সর্বোচ্চ ৫০% পর্যন্ত ছাড়! শীত ও উৎসবের কেনাকাটায় সেরা ছাড়',image:'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',status:'APPROVED',promoted:true,impressions:120,clicks:12,startDate:now(),endDate:now()});
+ db.advertisements.push({id:'ad1',title:'মেগা ফ্যাশন পয়েন্ট • ঈদ ও শীতের মেগা ছাড়',body:'সর্বোচ্চ ৫০% পর্যন্ত ছাড়! শীত ও উৎসবের কেনাকাটায় সেরা ছাড়',image:'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',status:'APPROVED',promoted:true,impressions:0,clicks:0,startDate:now(),endDate:''});
+ // Wave 1 honesty: the seed ad previously carried fabricated impressions:120/clicks:12
+ // with no counting code behind them. Counters now start at the true 0 and only move
+ // via the beacon/click routes. (An already-stored ad in an existing DB keeps whatever
+ // it has — this seed line governs fresh databases only; zeroing stored counters is an
+ // owner/admin decision, not something a seed may silently rewrite.)
  db.complaints.push({id:'c1',userId:'u_citizen',type:'রাস্তা',desc:'কধুরখীল রাস্তায় পানি জমে আছে',location:'কধুরখীল',status:'NEW',createdAt:now()});
  db.secret_reports.push({id:'sec1',title:'গোপন রিপোর্ট ১',desc:'(Admin only) নাগরিকের গোপন তথ্য',priority:'HIGH',status:'NEW',createdAt:now(),submitterHidden:true});
  db.volunteers=[];
@@ -134,7 +139,7 @@ function seedDB(){
 // normalizeDB() so a collection missing from an older/partial stored DB can never crash a page with
 // "Cannot read properties of undefined" (root cause of the 2026-10-08 admin 500s: pages read collections
 // the seed never created). New collections used anywhere MUST be added here.
-export const DB_COLLECTIONS=['users','roles','categories','subcategories','locations','feature_flags','posts','post_images','saved_posts','restaurants','menus','doctors','blood_donors','blood_requests','jobs','services','service_providers','lost_found','complaints','secret_reports','emergency_alerts','announcements','notifications','advertisements','memberships','reviews','transport_routes','transport_schedules','audit_logs','system_metrics','sessions','tokens','volunteers','reports','post_comments','visits','reset_requests','content_types','contents'];
+export const DB_COLLECTIONS=['users','roles','categories','subcategories','locations','feature_flags','posts','post_images','saved_posts','restaurants','menus','doctors','blood_donors','blood_requests','jobs','services','service_providers','lost_found','complaints','secret_reports','emergency_alerts','announcements','notifications','advertisements','memberships','reviews','transport_routes','transport_schedules','audit_logs','system_metrics','sessions','tokens','volunteers','reports','post_comments','visits','reset_requests','content_types','contents','search_logs','business_verifications'];
 export function normalizeDB(d:any):any{ if(!d||typeof d!=='object'||Array.isArray(d)) d={}; for(const k of DB_COLLECTIONS){ if(!Array.isArray(d[k])) d[k]=[]; } if(!d.settings||typeof d.settings!=='object'||Array.isArray(d.settings)) d.settings={}; for(const k of Object.keys(SETTINGS_DEFAULTS)) if(d.settings[k]===undefined) d.settings[k]=(SETTINGS_DEFAULTS as any)[k]; if(!d.visitStats||typeof d.visitStats!=='object'||Array.isArray(d.visitStats)) d.visitStats={total:0,byDay:{}}; if(typeof d.visitStats.total!=='number') d.visitStats.total=0; if(!d.visitStats.byDay||typeof d.visitStats.byDay!=='object') d.visitStats.byDay={}; if(!d.meta||typeof d.meta!=='object'||Array.isArray(d.meta)) d.meta={}; if(typeof d.meta.uploadBytesUsed!=='number') d.meta.uploadBytesUsed=0; if(!d.vanalytics||typeof d.vanalytics!=='object'||Array.isArray(d.vanalytics)) d.vanalytics={days:{},total:0,since:null,logs:[]}; if(!d.vanalytics.days||typeof d.vanalytics.days!=='object'||Array.isArray(d.vanalytics.days)) d.vanalytics.days={}; if(typeof d.vanalytics.total!=='number') d.vanalytics.total=0; if(!Array.isArray(d.vanalytics.logs)) d.vanalytics.logs=[];
  // Blood-request status canonicalization (2026-10-09): legacy records were written as 'OPEN'
  // while the dashboard counts only 'ACTIVE' — the two views disagreed. ACTIVE is now the single
@@ -148,7 +153,24 @@ export async function readDBAsync():Promise<any>{ if(DB_BACKEND==='file'){ const
 export async function writeDBAsync(d:any):Promise<void>{ const st=_dbBase.get(d); if(!st){ if(DB_BACKEND==='file') await _persistMerged(null,d); else await _persistMerged(null,d); return; } const base=JSON.parse(st.snap); await _persistMerged(base,d); }
 export function audit(db:any,actor:string,action:string,target:string,meta:any={}){ db.audit_logs.unshift({id:id('log'),actor,action,target,metadata:meta,createdAt:now()}); }
 export function sanitize(s:any){ return String(s||'').replace(/<[^>]*>/g,'').trim().slice(0,5000); }
+// Search-analytics record (Wave 2): defensive coercion for bk_search_logs rows. The ONLY
+// fields ever stored are the normalized term, the result count and the Dhaka day — no user
+// id, session or IP (privacy by shape, see lib/searchLog.ts).
+export function sanitizeSearchLog(r:any):any|null{ if(!r||typeof r!=='object'||!r.id) return null; const term=sanitize(r.term).slice(0,120); if(!term) return null; const rc=Number(r.resultCount); const d=String(r.day||''); return {id:String(r.id),term,resultCount:Number.isFinite(rc)&&rc>0?Math.floor(rc):0,day:/^\d{4}-\d{2}-\d{2}$/.test(d)?d:'',createdAt:String(r.createdAt||'')}; }
+// Business verification request (Wave 3): an owner's ask for the ✓ যাচাইকৃত badge on
+// their own CMS business content, decided in /admin/verifications. Defensive coercion
+// in the sanitizeSearchLog pattern — unknown/garbled stored rows degrade to a safe
+// shape, never crash a page. NOTE: nothing here is client-writable; the write routes
+// build records field-by-field and `verified` lives on the content record, set only by
+// the admin review route.
+export const BV_STATUSES=['PENDING','APPROVED','REJECTED'];
+export function sanitizeBusinessVerification(r:any):any|null{ if(!r||typeof r!=='object'||!r.id||!r.userId||!r.contentId) return null; return {id:String(r.id),userId:String(r.userId),contentId:String(r.contentId),businessName:sanitize(r.businessName).slice(0,200),note:sanitize(r.note).slice(0,1000),status:BV_STATUSES.includes(r.status)?r.status:'PENDING',reviewerId:String(r.reviewerId||''),reviewNote:sanitize(r.reviewNote).slice(0,500),createdAt:String(r.createdAt||''),reviewedAt:r.reviewedAt?String(r.reviewedAt):null}; }
 // Public projection of a post: moderation metadata never leaves the server, and when the
 // seller hid their phone (hidePhone) the contact numbers are removed for everyone except
 // the owner and ADMIN/SUPER_ADMIN/MODERATOR.
 export function publicPost(p:any,u:any){ if(!p) return p; const priv=!!u&&(u.id===p.userId||['ADMIN','SUPER_ADMIN','MODERATOR'].includes(u.role)); const q:any={...p}; delete q.moderator; delete q.latencyMin; delete q.approvedAt; delete q.rejectReason; if(p.hidePhone&&!priv){ delete q.phone; delete q.whatsapp; } return q; }
+// Donor phone privacy (Wave 1): the public donor surface must never print a full
+// number to anonymous visitors. Logged-in users (and the donor/staff) see it in full;
+// everyone else gets first-2 + last-3 only, e.g. 01••• •••566.
+export function maskPhone(ph:any){ const s=String(ph||''); if(s.length<6) return s; return s.slice(0,2)+'••• •••'+s.slice(-3); }
+export function publicDonor(d:any,u:any){ if(!d) return d; const priv=!!u&&(u.id===d.userId||['ADMIN','SUPER_ADMIN','MODERATOR'].includes(u.role)); const q:any={...d}; if(!priv) q.phone=maskPhone(d.phone); return q; }
