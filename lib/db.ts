@@ -4,27 +4,32 @@ export const DB_PATH=process.env.DB_PATH||(ON_VERCEL?'/tmp/boalkhali-db.json':pa
 export const UPLOAD_DIR=process.env.UPLOAD_DIR||(ON_VERCEL?'/tmp/boalkhali-uploads':path.join(process.cwd(),'public','uploads'));
 export const UPLOAD_QUOTA_BYTES=Math.floor((Number(process.env.UPLOAD_QUOTA_GB)||5)*1024*1024*1024); // posting uploads quota: 5 GB (user, 2026-10-08)
 // ---- DB backend selection (2026-10-08): Firestore when all 3 service-account env vars are set, else local file ----
-// Firestore stores the ENTIRE DB as one JSON string in doc bk_state/main (~22KB today; Firestore doc limit 1MB — revisit if state grows past ~800KB). The doc additionally carries a numeric `v` field: the optimistic-concurrency version used by mutateDBAsync/writeDBAsync (see the concurrency core below).
 export const DB_BACKEND:'firestore'|'file'=(process.env.FIREBASE_PROJECT_ID&&process.env.FIREBASE_CLIENT_EMAIL&&process.env.FIREBASE_PRIVATE_KEY)?'firestore':'file';
 let _fsDb:any=null; let _fsInit:Promise<any>|null=null; let _fsCache:{db:any,at:number,v:number}|null=null; const FS_TTL_MS=3000;
-// ---- Concurrency core (2026-10-09 data-integrity batch) ----
-// Root cause of the audit's silent data loss: readDBAsync hands out a whole-state snapshot and
-// writeDBAsync wrote the whole state straight back, so any writer holding a stale snapshot
-// (Firestore network latency + the 3s cache above, concurrent serverless instances, or an await
-// between read and write) silently overwrote newer records — posts/users vanished with no error.
-// Fix, two layers: (1) mutateDBAsync(fn) re-reads fresh state and applies fn under an optimistic
-// version check (Firestore transaction on the doc's `v` field, re-running fn on mismatch) or a
-// single-process FIFO queue (file backend). High-risk routes use it: register, session creation
-// (login/firebase), post create, moderate, admin users, secret intake/actions, track, upload bytes.
-// (2) Legacy writeDBAsync(db) can no longer clobber: every readDBAsync result is stamped
-// (WeakMap, invisible to JSON) with its base snapshot; if the stored state has moved on by write
-// time, a three-way merge — per top-level key, id-keyed inside arrays — keeps BOTH writers'
-// changes instead of dropping one side wholesale.
-// RESIDUAL RISK (honest): two writers editing the SAME record concurrently still resolve
-// last-writer-wins for that record, and a delete racing an edit of the same record resolves to
-// the delete. Scalars inside shared objects (e.g. meta.*) are not field-merged. bk_state/main
-// also remains ONE Firestore document (~1MB ceiling): splitting into per-collection documents
-// is the eventual cure and is still owed. Unknown top-level keys pass through merges untouched.
+// ---- Concurrency core v2 (2026-10-09 batch, A-01/M-01) ----
+// DIAGNOSIS (proven with a fake-Firestore harness that replicates the SDK re-invoking a
+// transaction callback on contention — 12 acked concurrent post-creates, 4 survived, exactly
+// the live audit): (1) mutateDBAsync set its `ok` flag inside the transaction callback; on
+// contention Firestore re-runs the callback, the retry read a moved version and returned
+// without staging a write, so an EMPTY transaction committed while `ok` stayed true from the
+// first attempt — the API returned a created post that was never stored ("success JSONs all
+// lied"). (2) Every write still funnels through ONE document bk_state/main: whole-state
+// snapshots overwrite records they never touched, same-record races lose whole records, and
+// the 1MB doc ceiling looms over every write.
+// FIX: the hot collections (HOT_COLLECTIONS) live as PER-RECORD DOCUMENTS — bk_<name>/{id}
+// on Firestore (same pattern as bk_images), per-record JSON files under <dbDir>/hot/<name>/
+// on the file backend. Two writers touching different records can no longer collide at all.
+// readDBAsync assembles legacy state (everything else, still bk_state/main / db.json) + the
+// per-record collections; a one-time lazy migration copies legacy rows up (idempotent,
+// marker-guarded). Writes diff base→new per collection and apply doc-level puts/deletes, so
+// other writers' concurrent adds/edits in untouched records always survive. Shared scalars
+// (settings/meta/…) stay on the legacy doc behind an optimistic version-checked transaction
+// whose commit flag is reset at the top of EVERY callback invocation (the old bug), and
+// mutateDBAsync re-runs fn on fresh state whenever the legacy doc moved underneath it.
+// RESIDUAL (honest): two writers editing the SAME record concurrently resolve per-record
+// last-writer-wins; an edit racing a delete of the same record resurrects the edited copy.
+// Low-volume collections (notifications, audit_logs, announcements, …) remain on the legacy
+// doc; the doc no longer grows with posts/users/sessions, so the 1MB ceiling is defused.
 const _dbBase=new WeakMap<object,{v:number,snap:string}>();
 function _stamp(db:any,v:number){ try{ _dbBase.set(db,{v,snap:JSON.stringify(db)}); }catch{} return db; }
 const _jeq=(a:any,b:any)=>{ try{ return JSON.stringify(a)===JSON.stringify(b); }catch{ return a===b; } };
@@ -36,15 +41,60 @@ function _mergeArr(base:any[],mine:any[],cur:any[]):any[]{ const keyOf=(r:any)=>
 function _merge3(base:any,mine:any,cur:any):any{ const out:any={}; const keys=Array.from(new Set([...Object.keys(base||{}),...Object.keys(mine||{}),...Object.keys(cur||{})])); for(const k of keys){ const b=base?base[k]:undefined, m=mine?mine[k]:undefined, c=cur?cur[k]:undefined; if(_jeq(m,b)) out[k]=c; else if(_jeq(c,b)) out[k]=m; else if(Array.isArray(m)&&Array.isArray(c)) out[k]=_mergeArr(Array.isArray(b)?b:[],m,c); else out[k]=m; } return out; }
 let _fileQ:Promise<any>=Promise.resolve();
 function _withFileLock<T>(f:()=>Promise<T>):Promise<T>{ const run=_fileQ.then(f,f); _fileQ=run.then(()=>undefined,()=>undefined); return run; }
-export async function mutateDBAsync<T>(fn:(db:any)=>T|Promise<T>):Promise<T>{
- if(DB_BACKEND==='file'){ return _withFileLock(async()=>{ const db=_stamp(readFileDB(),0); const out=await fn(db); writeFileDB(db); return out; }); }
+// ---- per-record store for the hot collections ----
+export const HOT_COLLECTIONS=['users','posts','sessions','blood_requests','blood_donors','complaints','secret_reports','post_comments','saved_posts'];
+const _HOTSET=new Set(HOT_COLLECTIONS); const _isHot=(k:string)=>_HOTSET.has(k);
+const _recId=(r:any)=>(r&&typeof r==='object'&&r.id!==undefined&&r.id!==null)?String(r.id):null;
+const _cleanRec=(r:any)=>{ try{ return JSON.parse(JSON.stringify(r)); }catch{ return r; } };
+// Legacy arrays are newest-first (unshift) for the hot collections; keep that observable order.
+const _sortHot=(arr:any[])=>arr.sort((a:any,b:any)=>String((b&&b.createdAt)||'').localeCompare(String((a&&a.createdAt)||''))||String((b&&b.id)||'').localeCompare(String((a&&a.id)||'')));
+const _fname=(s:string)=>s.replace(/[^\w.-]/g,'_');
+const _hotRoot=()=>path.join(path.dirname(DB_PATH),'hot');
+function _hotListFile(name:string):any[]{ try{ const d=path.join(_hotRoot(),name); return _sortHot(fs.readdirSync(d).filter(f=>f.endsWith('.json')&&!f.startsWith('.')).map(f=>{ try{ return JSON.parse(fs.readFileSync(path.join(d,f),'utf8')); }catch{ return null; } }).filter(Boolean)); }catch{ return []; } }
+function _hotPutFile(name:string,r:any){ const d=path.join(_hotRoot(),name); fs.mkdirSync(d,{recursive:true}); const f=path.join(d,_fname(_recId(r) as string)+'.json'); const t=f+'.tmp'; fs.writeFileSync(t,JSON.stringify(r)); fs.renameSync(t,f); }
+function _hotDelFile(name:string,id:string){ try{ fs.unlinkSync(path.join(_hotRoot(),name,_fname(id)+'.json')); }catch{} }
+let _fileMig=false;
+const _hotMigratedFile=()=>{ try{ return fs.existsSync(path.join(_hotRoot(),'.migrated')); }catch{ return false; } };
+function _hotMarkFile(){ try{ fs.mkdirSync(_hotRoot(),{recursive:true}); fs.writeFileSync(path.join(_hotRoot(),'.migrated'),new Date().toISOString()); }catch{} }
+async function _hotListFs(name:string):Promise<any[]>{ const c=(await firestoreDB()).collection('bk_'+name); const s=await c.get(); return _sortHot(s.docs.map((d:any)=>d.data())); }
+async function _hotApplyFs(puts:{name:string,r:any}[],dels:{name:string,id:string}[]){ if(!puts.length&&!dels.length) return; const f=await firestoreDB(); const ops:any[]=[...puts.map(r=>({t:'s',r})),...dels.map(d=>({t:'d',d}))]; for(let i=0;i<ops.length;i+=400){ const b=f.batch(); for(const o of ops.slice(i,i+400)){ if(o.t==='s') b.set(f.collection('bk_'+o.r.name).doc(String(o.r.r.id)),_cleanRec(o.r.r)); else b.delete(f.collection('bk_'+o.d.name).doc(String(o.d.id))); } await b.commit(); } }
+let _hotMigP:Promise<void>|null=null;
+async function _ensureHotMigrated(legacy:any){ if(DB_BACKEND==='file'){ if(_fileMig||_hotMigratedFile()){ _fileMig=true; return; } for(const n of HOT_COLLECTIONS){ if(_hotListFile(n).length===0&&Array.isArray(legacy[n])) for(const r of legacy[n]) if(_recId(r)) _hotPutFile(n,r); } _hotMarkFile(); _fileMig=true; return; }
+ if(_hotMigP) return _hotMigP; _hotMigP=(async()=>{ const f=await firestoreDB(); const mref=f.collection('bk_meta').doc('hot_migration'); const m=await mref.get(); if(m.exists) return; for(const n of HOT_COLLECTIONS){ const cur=await _hotListFs(n); if(cur.length===0&&Array.isArray(legacy[n])) await _hotApplyFs(legacy[n].filter((r:any)=>_recId(r)).map((r:any)=>({name:n,r})),[]); } await mref.set({at:new Date().toISOString()}); })(); return _hotMigP; }
+// Overlay the per-record collections onto a legacy state object (which first seeds the
+// one-time migration from its own hot arrays when the store is still empty).
+async function _overlayHot(db:any){ await _ensureHotMigrated(db); if(DB_BACKEND==='file'){ for(const n of HOT_COLLECTIONS) db[n]=_hotListFile(n); } else { for(const n of HOT_COLLECTIONS) db[n]=await _hotListFs(n); } return db; }
+function _legacyOf(db:any){ const o:any={}; for(const k of Object.keys(db||{})) if(!_isHot(k)) o[k]=db[k]; return o; }
+function _hotDiff(base:any,mine:any){ const puts:{name:string,r:any}[]=[]; const dels:{name:string,id:string}[]=[]; for(const n of HOT_COLLECTIONS){ if(!Array.isArray(mine[n])) continue; const bm=new Map((Array.isArray(base[n])?base[n]:[]).map((r:any)=>[_recId(r),r])); const seen=new Set<string>(); for(const r of mine[n]){ const k=_recId(r); if(!k) continue; seen.add(k); const b=bm.get(k); if(!b||!_jeq(b,r)) puts.push({name:n,r}); } bm.forEach((_v,k)=>{ if(k&&!seen.has(k)) dels.push({name:n,id:k}); }); } return {puts,dels}; }
+async function _applyHotDiff(diff:{puts:{name:string,r:any}[],dels:{name:string,id:string}[]}):Promise<void>{ if(DB_BACKEND==='file'){ for(const p of diff.puts) _hotPutFile(p.name,p.r); for(const d of diff.dels) _hotDelFile(d.name,d.id); return; } await _hotApplyFs(diff.puts,diff.dels); }
+// Persist (base -> mine) shared by writeDBAsync/mutateDBAsync. Legacy keys go through a
+// version-checked write of bk_state/main (hot arrays stripped — they live per-record now);
+// hot keys go out as per-record puts/deletes diffed against base. A legacy-doc version move
+// mid-write aborts BEFORE anything is applied and the caller retries on fresh state.
+// The legacy doc is written ONLY when a legacy key actually changed vs base — hot-only
+// writes (a new post, a new session) never touch bk_state/main, so they cannot contend at
+// all. Returns 'skip' (unchanged), true (committed) or false (version moved; caller retries
+// on fresh state). `committed` is reset at the top of EVERY callback invocation: the SDK
+// re-runs the callback on contention, and a stale true was the old silent-loss bug.
+async function _writeLegacyFs(base:any,mine:any,baseV:number):Promise<boolean|string>{ if(_jeq(_legacyOf(base),_legacyOf(mine))) return 'skip'; const legacyJson=JSON.stringify(_legacyOf(mine)); const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); let committed=false;
+ await fsdb.runTransaction(async(tx:any)=>{ committed=false; const s2=await tx.get(ref); const curV=s2.exists?Number((s2.data()||{}).v)||0:0; if(curV!==baseV) return; tx.set(ref,{json:legacyJson,v:curV+1,updatedAt:new Date().toISOString()}); committed=true; }); return committed; }
+async function _persistMerged(base:any,mine:any):Promise<any>{
+ if(DB_BACKEND==='file'){ return _withFileLock(async()=>{ const curFile=normalizeDB(readFileDB()); const cur=await _overlayHot(JSON.parse(JSON.stringify(curFile))); const b=base||cur; const merged=base?_merge3(b,mine,cur):_cleanRec(mine); const diff=_hotDiff(b,merged); await _applyHotDiff(diff); const legacyFile:any={...curFile}; const ml=_legacyOf(merged); for(const k of Object.keys(ml)) legacyFile[k]=ml[k]; writeFileDB(legacyFile); return merged; }); }
  const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main');
- for(let i=0;i<8;i++){ let db:any, v=0; const snap=await ref.get(); if(!snap.exists){ db=normalizeDB(seedDB()); } else { const d:any=snap.data()||{}; v=Number(d.v)||0; try{ db=normalizeDB(JSON.parse(d.json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } }
-  const out=await fn(db); const json=JSON.stringify(db); let ok=false;
-  await fsdb.runTransaction(async(tx:any)=>{ const s2=await tx.get(ref); const curV=s2.exists?Number((s2.data()||{}).v)||0:0; if(curV!==v) return; tx.set(ref,{json,v:v+1,updatedAt:new Date().toISOString()}); ok=true; });
-  if(ok){ _fsCache={db:JSON.parse(json),at:Date.now(),v:v+1}; return out; }
-  await new Promise(r=>setTimeout(r,20*(i+1))); }
- throw new Error('DB_WRITE_CONTENTION: mutation failed after 8 retries'); }
+ for(let i=0;i<10;i++){ const s=await ref.get(); const curV=s.exists?Number((s.data()||{}).v)||0:0; let cur:any; if(s.exists){ try{ cur=normalizeDB(JSON.parse((s.data()||{}).json||'')); }catch{ cur={}; } } else cur=normalizeDB(seedDB()); const curFull=await _overlayHot(cur); const b=base||curFull; const merged=base?_merge3(b,mine,curFull):_cleanRec(mine); const diff=_hotDiff(b,merged); const w=await _writeLegacyFs(b,merged,curV);
+  if(w!==true&&w!=='skip'){ await new Promise(r=>setTimeout(r,20*(i+1)+Math.floor(Math.random()*15))); continue; }
+  await _hotApplyFs(diff.puts,diff.dels); _fsCache=null; return merged; }
+ throw new Error('DB_WRITE_CONTENTION: write failed after 10 retries'); }
+export async function mutateDBAsync<T>(fn:(db:any)=>T|Promise<T>):Promise<T>{
+ if(DB_BACKEND==='file'){ return _withFileLock(async()=>{ const curFile=normalizeDB(readFileDB()); const db:any=await _overlayHot(JSON.parse(JSON.stringify(curFile))); const base=JSON.parse(JSON.stringify(db)); const out=await fn(db); const diff=_hotDiff(base,db); await _applyHotDiff(diff); const legacyFile:any={...curFile}; const ml=_legacyOf(db); for(const k of Object.keys(ml)) legacyFile[k]=ml[k]; writeFileDB(legacyFile); return out; }); }
+ // Firestore: fn runs on freshly-assembled state; if the legacy doc moves before commit,
+ // fn RE-RUNS on fresh state — a mutation is only acknowledged after its writes are staged
+ // in a transaction that actually committed (the old code could acknowledge a lost write).
+ for(let i=0;i<10;i++){ const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); const snap=await ref.get(); let db:any; let v=0; if(!snap.exists){ db=normalizeDB(seedDB()); } else { v=Number((snap.data()||{}).v)||0; try{ db=normalizeDB(JSON.parse((snap.data()||{}).json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } }
+  const full:any=await _overlayHot(db); const base=JSON.parse(JSON.stringify(full)); const out=await fn(full); const diff=_hotDiff(base,full); const w=await _writeLegacyFs(base,full,v);
+  if(w!==true&&w!=='skip'){ await new Promise(r=>setTimeout(r,20*(i+1)+Math.floor(Math.random()*15))); continue; }
+  await _hotApplyFs(diff.puts,diff.dels); _fsCache=null; return out; }
+ throw new Error('DB_WRITE_CONTENTION: mutation failed after 10 retries'); }
 async function firebaseAdmin():Promise<any>{ try{ const mod:any=await import('firebase-admin'); const admin=mod.default||mod; if(!admin.apps.length){ admin.initializeApp({credential:admin.credential.cert({projectId:process.env.FIREBASE_PROJECT_ID as string,clientEmail:process.env.FIREBASE_CLIENT_EMAIL as string,privateKey:(process.env.FIREBASE_PRIVATE_KEY as string).replace(/\\n/g,'\n')})}); } return admin; }catch(e:any){ throw new Error('FIRESTORE_INIT_FAILED: '+(e?.message||e)); } }
 export async function getFirebaseAdmin():Promise<any>{ if(DB_BACKEND!=='firestore') throw new Error('FIREBASE_NOT_CONFIGURED'); return firebaseAdmin(); }
 async function firestoreDB():Promise<any>{ if(_fsDb) return _fsDb; if(_fsInit) return _fsInit; _fsInit=(async()=>{ const admin=await firebaseAdmin(); _fsDb=admin.firestore(); return _fsDb; })(); return _fsInit; }
@@ -67,14 +117,14 @@ function seedDB(){
  db.posts.push(P({id:'p_bike',userId:'u_owner',categorySlug:'market',title:'Bajaj Discover 125cc ডিস্ক ব্রেক মোটরসাইকেল',desc:'ভালো কন্ডিশন, সব কাগজ আপডেট',price:88000,location:'বোয়ালখালী বাজার, বোয়ালখালী',landmark:'বোয়ালখালী বাজার',phone:'01712445566',whatsapp:'01712445566',promoted:true,image:'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800'}));
  db.posts.push(P({id:'p_phone',userId:'u_owner',categorySlug:'market',title:'Redmi Note 12 Pro (8GB/128GB) স্মার্টফোন',desc:'ফুল বক্স, অল্প ব্যবহৃত',price:16500,location:'বোয়ালখালী সুপার মার্কেট, বোয়ালখালী',phone:'01712445566',image:'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800'}));
  db.posts.push(P({id:'p_house',userId:'u_citizen',categorySlug:'house',title:'কধুরখীল মোড়ে ৩ রুমের ফ্যামিলি বাসা ভাড়া',desc:'৩ রুম + ড্রয়িং, টাইলস, পানির সুবিধা',price:8500,location:'কধুরখীল',subcategory:'ফ্যামিলি বাসা',rooms:'৩ রুম + ড্রয়িং'}));
- db.restaurants.push({id:'r1',name:'বোম্বে সুইটস ও কনফেকশনারি',category:'ঐতিহ্যবাহী মিষ্টি',price:'৩৫০ ৳/কেজি',location:'কালুরঘাট রোড, বোয়ালখালী',verified:true,delivery:false,menu:'চামচম, রসগোল্লা, ক্ষীরভোগ',desc:'খাঁটি গাভীর দুধের চামচম, ক্ষীরসা, কাঁচাগোল্লা ও জিলাপি',image:'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800',phone:'01710000001'},{id:'r2',name:'বোয়ালখালী স্পেশাল বিরিয়ানি ও কাচ্চি ঘর',category:'বিরিয়ানি ও কাবাব',price:'১৮০ ৳/প্লেট',location:'উপজেলা মোড়, বোয়ালখালী',verified:true,delivery:true,menu:'শাহী কাচ্চি, বিফ তেহারি, মোরগ পোলাও',desc:'খাসির শাহী কাচ্চি, সরিষার তেলে রান্না বিফ তেহারি',image:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800',phone:'01710000002'});
- db.jobs.push({id:'j1',title:'চৌমুহনী বাজারের শীর্ষ কাপড়ের শোরুমে সেলস এক্সিকিউটিভ আবশ্যক',company:'আল-মদিনা ফ্যাশন হাউজ',type:'FULL-TIME',salary:'১২,০০০ - ১৫,০০০ ৳ (কমিশনসহ)',deadline:'২০২৬-09-25',location:'চৌমুহনী বাজার ২য় তলা, বোয়ালখালী',verified:true,desc:'গ্রাহকদের সাথে মার্জিত আচরণ ও সেলস হ্যান্ডেল করতে হবে। ন্যূনতম এসএসসি পাস।',phone:'01712445566'},{id:'j2',title:'আধুনিক অফসেট প্রেসে গ্রাফিক্স ডিজাইনার ও কম্পিউটার অপারেটর',company:'বোয়ালখালী ডিজিটাল প্রেস',type:'FULL-TIME',salary:'১৪,০০০ - ১৮,০০০ ৳',deadline:'২০২৬-09-30',location:'কালুরঘাট রোড, বোয়ালখালী',verified:true,desc:'অফসেট প্রেসে কাজের অভিজ্ঞতা থাকতে হবে',phone:'01712445567'});
- db.doctors.push({id:'d1',name:'ডা. আব্দুল করিম',specialty:'মেডিসিন',chamber:'বোয়ালখালী মেডিকেল',address:'বোয়ালখালী সদর রোড',phone:'01710000003',hours:'বিকাল ৪টা - রাত ৯টা',fee:500,verified:true,emergency:true});
- db.blood_requests.push({id:'b1',patient:'মোছাঃ রোকেয়া বেগম (৫৫)',bloodGroup:'B+',location:'বোয়ালখালী হাসপাতাল',urgency:'CRITICAL',contact:'01710000004',status:'ACTIVE',createdAt:now()});
- db.blood_donors.push({id:'bd1',name:'রাহিম উদ্দিন',bloodGroup:'B+',phone:'01710000005',location:'কধুরখীল',available:true,lastDonation:'2026-06-01'});
+ db.restaurants.push({id:'r1',name:'বোম্বে সুইটস ও কনফেকশনারি',category:'ঐতিহ্যবাহী মিষ্টি',price:'৩৫০ ৳/কেজি',location:'কালুরঘাট রোড, বোয়ালখালী',verified:true,delivery:false,menu:'চামচম, রসগোল্লা, ক্ষীরভোগ',desc:'খাঁটি গাভীর দুধের চামচম, ক্ষীরসা, কাঁচাগোল্লা ও জিলাপি',image:'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800',phone:''},{id:'r2',name:'বোয়ালখালী স্পেশাল বিরিয়ানি ও কাচ্চি ঘর',category:'বিরিয়ানি ও কাবাব',price:'১৮০ ৳/প্লেট',location:'উপজেলা মোড়, বোয়ালখালী',verified:true,delivery:true,menu:'শাহী কাচ্চি, বিফ তেহারি, মোরগ পোলাও',desc:'খাসির শাহী কাচ্চি, সরিষার তেলে রান্না বিফ তেহারি',image:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800',phone:''});
+ db.jobs.push({id:'j1',title:'চৌমুহনী বাজারের শীর্ষ কাপড়ের শোরুমে সেলস এক্সিকিউটিভ আবশ্যক',company:'আল-মদিনা ফ্যাশন হাউজ',type:'FULL-TIME',salary:'১২,০০০ - ১৫,০০০ ৳ (কমিশনসহ)',deadline:'২০২৬-09-25',location:'চৌমুহনী বাজার ২য় তলা, বোয়ালখালী',verified:true,desc:'গ্রাহকদের সাথে মার্জিত আচরণ ও সেলস হ্যান্ডেল করতে হবে। ন্যূনতম এসএসসি পাস।',phone:'01712445566'},{id:'j2',title:'আধুনিক অফসেট প্রেসে গ্রাফিক্স ডিজাইনার ও কম্পিউটার অপারেটর',company:'বোয়ালখালী ডিজিটাল প্রেস',type:'FULL-TIME',salary:'১৪,০০০ - ১৮,০০০ ৳ (কমিশনসহ)',deadline:'২০২৬-09-30',location:'কালুরঘাট রোড, বোয়ালখালী',verified:true,desc:'অফসেট প্রেসে কাজের অভিজ্ঞতা থাকতে হবে',phone:'01712445567'});
+ // A-04 (2026-10-09 batch): demo health records (doctor d1 01710000003, blood request b1, donor bd1,
+ // service providers s1/s2) REMOVED from the seed — invented phone numbers were rendered publicly as
+ // real, callable contacts for a doctor, a critical patient and an "available now" donor. Fresh
+ // databases now start honestly empty here; real entries come from admin import / citizen flows.
  db.emergency_alerts.push({id:'e1',title:'জরুরি সতর্কতা',body:'জরুরি প্রয়োজনে যোগাযোগ করুন',severity:'HIGH',active:true,createdAt:now()});
  db.advertisements.push({id:'ad1',title:'মেগা ফ্যাশন পয়েন্ট • ঈদ ও শীতের মেগা ছাড়',body:'সর্বোচ্চ ৫০% পর্যন্ত ছাড়! শীত ও উৎসবের কেনাকাটায় সেরা ছাড়',image:'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',status:'APPROVED',promoted:true,impressions:120,clicks:12,startDate:now(),endDate:now()});
- db.service_providers.push({id:'s1',name:'করিম ইলেকট্রিশিয়ান',service:'ইলেকট্রিশিয়ান',location:'বোয়ালখালী বাজার',phone:'01710000006',experience:'৫ বছর',pricing:'৩০০৳ থেকে',verified:true,rating:4.8},{id:'s2',name:'সুমন প্লাম্বার',service:'প্লাম্বার',location:'কধুরখীল',phone:'01710000007',experience:'৩ বছর',pricing:'২৫০৳ থেকে',verified:false,rating:4.5});
  db.complaints.push({id:'c1',userId:'u_citizen',type:'রাস্তা',desc:'কধুরখীল রাস্তায় পানি জমে আছে',location:'কধুরখীল',status:'NEW',createdAt:now()});
  db.secret_reports.push({id:'sec1',title:'গোপন রিপোর্ট ১',desc:'(Admin only) নাগরিকের গোপন তথ্য',priority:'HIGH',status:'NEW',createdAt:now(),submitterHidden:true});
  db.volunteers=[];
@@ -84,7 +134,7 @@ function seedDB(){
 // normalizeDB() so a collection missing from an older/partial stored DB can never crash a page with
 // "Cannot read properties of undefined" (root cause of the 2026-10-08 admin 500s: pages read collections
 // the seed never created). New collections used anywhere MUST be added here.
-export const DB_COLLECTIONS=['users','roles','categories','subcategories','locations','feature_flags','posts','post_images','saved_posts','restaurants','menus','doctors','blood_donors','blood_requests','jobs','services','service_providers','lost_found','complaints','secret_reports','emergency_alerts','announcements','notifications','advertisements','memberships','reviews','transport_routes','transport_schedules','audit_logs','system_metrics','sessions','tokens','volunteers','reports','post_comments','visits'];
+export const DB_COLLECTIONS=['users','roles','categories','subcategories','locations','feature_flags','posts','post_images','saved_posts','restaurants','menus','doctors','blood_donors','blood_requests','jobs','services','service_providers','lost_found','complaints','secret_reports','emergency_alerts','announcements','notifications','advertisements','memberships','reviews','transport_routes','transport_schedules','audit_logs','system_metrics','sessions','tokens','volunteers','reports','post_comments','visits','reset_requests'];
 export function normalizeDB(d:any):any{ if(!d||typeof d!=='object'||Array.isArray(d)) d={}; for(const k of DB_COLLECTIONS){ if(!Array.isArray(d[k])) d[k]=[]; } if(!d.settings||typeof d.settings!=='object'||Array.isArray(d.settings)) d.settings={}; for(const k of Object.keys(SETTINGS_DEFAULTS)) if(d.settings[k]===undefined) d.settings[k]=(SETTINGS_DEFAULTS as any)[k]; if(!d.visitStats||typeof d.visitStats!=='object'||Array.isArray(d.visitStats)) d.visitStats={total:0,byDay:{}}; if(typeof d.visitStats.total!=='number') d.visitStats.total=0; if(!d.visitStats.byDay||typeof d.visitStats.byDay!=='object') d.visitStats.byDay={}; if(!d.meta||typeof d.meta!=='object'||Array.isArray(d.meta)) d.meta={}; if(typeof d.meta.uploadBytesUsed!=='number') d.meta.uploadBytesUsed=0; if(!d.vanalytics||typeof d.vanalytics!=='object'||Array.isArray(d.vanalytics)) d.vanalytics={days:{},total:0,since:null,logs:[]}; if(!d.vanalytics.days||typeof d.vanalytics.days!=='object'||Array.isArray(d.vanalytics.days)) d.vanalytics.days={}; if(typeof d.vanalytics.total!=='number') d.vanalytics.total=0; if(!Array.isArray(d.vanalytics.logs)) d.vanalytics.logs=[];
  // Blood-request status canonicalization (2026-10-09): legacy records were written as 'OPEN'
  // while the dashboard counts only 'ACTIVE' — the two views disagreed. ACTIVE is now the single
@@ -94,14 +144,8 @@ export function normalizeDB(d:any):any{ if(!d||typeof d!=='object'||Array.isArra
  return d; }
 function readFileDB():any{ try{ if(!fs.existsSync(DB_PATH)){const d=seedDB(); writeFileDB(d); return d;} return normalizeDB(JSON.parse(fs.readFileSync(DB_PATH,'utf8')));}catch{ const d=seedDB(); writeFileDB(d); return d;}}
 function writeFileDB(d:any){ fs.mkdirSync(path.dirname(DB_PATH),{recursive:true}); const t=DB_PATH+'.tmp'; fs.writeFileSync(t,JSON.stringify(d,null,2)); fs.renameSync(t,DB_PATH);}
-export async function readDBAsync():Promise<any>{ if(DB_BACKEND==='file') return _stamp(readFileDB(),0); if(_fsCache&&Date.now()-_fsCache.at<FS_TTL_MS) return _stamp(JSON.parse(JSON.stringify(_fsCache.db)),_fsCache.v); const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); let snap:any; try{ snap=await ref.get(); }catch(e:any){ throw new Error('FIRESTORE_READ_FAILED: '+(e?.message||e)); } if(!snap.exists){ const d=seedDB(); await writeDBAsync(d); return _stamp(JSON.parse(JSON.stringify(d)),1); } let db:any; const v=Number((snap.data()||{}).v)||0; try{ db=normalizeDB(JSON.parse((snap.data()||{}).json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } _fsCache={db,at:Date.now(),v}; return _stamp(JSON.parse(JSON.stringify(db)),v); }
-export async function writeDBAsync(d:any):Promise<void>{ const st=_dbBase.get(d);
- if(DB_BACKEND==='file'){ if(!st){ writeFileDB(d); return; } const base=JSON.parse(st.snap); const cur=readFileDB(); writeFileDB(_jeq(cur,base)?d:_merge3(base,d,cur)); return; }
- const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main');
- if(!st){ const json=JSON.stringify(d); let nv=1; try{ await fsdb.runTransaction(async(tx:any)=>{ const s=await tx.get(ref); nv=(s.exists?Number((s.data()||{}).v)||0:0)+1; tx.set(ref,{json,v:nv,updatedAt:new Date().toISOString()}); }); }catch(e:any){ throw new Error('FIRESTORE_WRITE_FAILED: '+(e?.message||e)); } _fsCache={db:JSON.parse(json),at:Date.now(),v:nv}; return; }
- const base=JSON.parse(st.snap); let finalDb:any=d, newV=0;
- try{ await fsdb.runTransaction(async(tx:any)=>{ const s=await tx.get(ref); const curV=s.exists?Number((s.data()||{}).v)||0:0; newV=curV+1; if(curV===st.v){ tx.set(ref,{json:JSON.stringify(d),v:newV,updatedAt:new Date().toISOString()}); finalDb=d; } else { let curDb:any={}; if(s.exists){ try{ curDb=normalizeDB(JSON.parse((s.data()||{}).json||'')); }catch{ curDb={}; } } finalDb=_merge3(base,d,curDb); tx.set(ref,{json:JSON.stringify(finalDb),v:newV,updatedAt:new Date().toISOString()}); } }); }catch(e:any){ throw new Error('FIRESTORE_WRITE_FAILED: '+(e?.message||e)); }
- _fsCache={db:JSON.parse(JSON.stringify(finalDb)),at:Date.now(),v:newV}; }
+export async function readDBAsync():Promise<any>{ if(DB_BACKEND==='file'){ const db=normalizeDB(readFileDB()); await _overlayHot(db); return _stamp(db,0); } if(_fsCache&&Date.now()-_fsCache.at<FS_TTL_MS) return _stamp(JSON.parse(JSON.stringify(_fsCache.db)),_fsCache.v); const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); let snap:any; try{ snap=await ref.get(); }catch(e:any){ throw new Error('FIRESTORE_READ_FAILED: '+(e?.message||e)); } if(!snap.exists){ const d=normalizeDB(seedDB()); await _overlayHot(d); await writeDBAsync(d); return _stamp(JSON.parse(JSON.stringify(d)),1); } let db:any; const v=Number((snap.data()||{}).v)||0; try{ db=normalizeDB(JSON.parse((snap.data()||{}).json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } await _overlayHot(db); _fsCache={db,at:Date.now(),v}; return _stamp(JSON.parse(JSON.stringify(db)),v); }
+export async function writeDBAsync(d:any):Promise<void>{ const st=_dbBase.get(d); if(!st){ if(DB_BACKEND==='file') await _persistMerged(null,d); else await _persistMerged(null,d); return; } const base=JSON.parse(st.snap); await _persistMerged(base,d); }
 export function audit(db:any,actor:string,action:string,target:string,meta:any={}){ db.audit_logs.unshift({id:id('log'),actor,action,target,metadata:meta,createdAt:now()}); }
 export function sanitize(s:any){ return String(s||'').replace(/<[^>]*>/g,'').trim().slice(0,5000); }
 // Public projection of a post: moderation metadata never leaves the server, and when the
