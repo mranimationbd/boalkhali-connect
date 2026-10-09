@@ -39,6 +39,8 @@ export const ERR_MSG: Record<string, string> = {
   INVALID_ACTION: 'এই কাজটি করা যাচ্ছে না',
   INVALID_ROLE: 'অ্যাকাউন্টের ধরন সঠিক নয়',
   NOTHING_TO_CHANGE: 'কোনো পরিবর্তন দেওয়া হয়নি',
+  RETENTION_RANGE: 'সংরক্ষণের মেয়াদ ৩০ থেকে ৯০ দিনের মধ্যে হতে হবে',
+  STATS_UNAVAILABLE: 'পরিসংখ্যান আপাতত পাওয়া যাচ্ছে না — পরে আবার চেষ্টা করুন',
 };
 export function errMsg(code?: string | null): string {
   if (!code) return 'দুঃখিত, কিছু সমস্যা হয়েছে — আবার চেষ্টা করুন';
