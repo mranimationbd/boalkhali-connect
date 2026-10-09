@@ -1,0 +1,13 @@
+import {NextResponse} from 'next/server'; import type {NextRequest} from 'next/server';
+// Real 404 status for non-PUBLISHED CMS detail URLs (A-CMS gate). The detail page calls
+// notFound(), but the root app/loading.tsx Suspense boundary makes Next.js flush an HTTP 200
+// shell before the page render throws — the streamed not-found UI can never change the status
+// code afterwards (proven: removing root loading.tsx restored 404s). The gate therefore runs
+// here, before streaming starts, and only for exactly /content/<type>/<slug>; the listing,
+// index, admin and every other route keep the friendly loading skeleton untouched.
+const NF='<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>পাওয়া যায়নি — বোয়ালখালী কানেক্ট</title><style>body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f6f8f7;color:#11352a;display:grid;place-items:center;min-height:100vh;padding:24px;box-sizing:border-box}.card{max-width:420px;text-align:center;background:#fff;border:1px solid #d8e6df;border-radius:20px;padding:32px 24px;box-shadow:0 8px 30px rgba(6,78,59,.08)}h1{margin:0 0 8px;font-size:22px}.p{color:#52665e;font-size:15px;line-height:1.6;margin:0 0 20px}a{display:inline-block;background:#0a7a54;color:#fff;text-decoration:none;font-weight:700;padding:10px 18px;border-radius:999px}</style></head><body><div class="card"><h1>দুঃখিত, পেজটি পাওয়া যায়নি</h1><p class="p">আপনি যে তথ্যটি খুঁজছেন তা হয়তো সরিয়ে ফেলা হয়েছে, অথবা এখনো প্রকাশিত হয়নি।</p><a href="/content">তথ্য ভাণ্ডারে ফিরুন</a></div></body></html>';
+export async function middleware(req:NextRequest){ const parts=req.nextUrl.pathname.split('/').filter(Boolean); if(parts.length!==3||parts[0]!=='content') return NextResponse.next(); let visible:boolean|null=null; try{ const r=await fetch(req.nextUrl.origin+'/api/content-status?type='+encodeURIComponent(parts[1])+'&slug='+encodeURIComponent(parts[2]),{cache:'no-store'}); if(r.ok){ const j=await r.json(); visible=!!j.visible; } }catch{} if(visible===null||visible) return NextResponse.next(); return new NextResponse(NF,{status:404,headers:{'content-type':'text/html; charset=utf-8','x-robots-tag':'noindex'}}); }
+// NOTE: the matcher is intentionally broad — Next 14.2 mis-compiled '/content/:type/:slug'
+// to a single-segment pattern in the middleware manifest, so the exact two-segment scope is
+// enforced by the parts guard inside (anything else passes straight through).
+export const config={matcher:['/content/:path*']};

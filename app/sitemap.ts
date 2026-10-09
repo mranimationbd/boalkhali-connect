@@ -1,3 +1,6 @@
-import {MetadataRoute} from 'next'; import {SITE_URL} from '@/lib/site'; import {CATEGORIES} from '@/lib/db'; import {PLACES} from '@/lib/places';
-const STATIC=['','/categories','/restaurants','/jobs','/blood','/emergency','/boalkhali','/doctors','/search','/about'];
-export default function sitemap():MetadataRoute.Sitemap{ const now=new Date(); return [...STATIC.map(p=>({url:SITE_URL+p,lastModified:now})),...CATEGORIES.map(c=>({url:SITE_URL+'/category/'+c.slug,lastModified:now})),...PLACES.map(p=>({url:SITE_URL+'/boalkhali/'+p.slug,lastModified:now}))]; }
+import {MetadataRoute} from 'next'; import {SITE_URL} from '@/lib/site'; import {CATEGORIES,readDBAsync} from '@/lib/db'; import {PLACES} from '@/lib/places'; import {sanitizeContentType} from '@/lib/cms'; export const dynamic='force-dynamic';
+const STATIC=['','/categories','/restaurants','/jobs','/blood','/emergency','/boalkhali','/doctors','/search','/about','/content'];
+export default async function sitemap():Promise<MetadataRoute.Sitemap>{ const now=new Date(); const out:MetadataRoute.Sitemap=[...STATIC.map(p=>({url:SITE_URL+p,lastModified:now})),...CATEGORIES.map(c=>({url:SITE_URL+'/category/'+c.slug,lastModified:now})),...PLACES.map(p=>({url:SITE_URL+'/boalkhali/'+p.slug,lastModified:now}))];
+ // CMS: public type listings + PUBLISHED items only (drafts/unpublished never leak into SEO).
+ try{ const db=await readDBAsync(); const types=(db.content_types||[]).map((t:any)=>sanitizeContentType(t)).filter((t:any)=>t&&t.enabled&&t.publicListing); const bySlug:any={}; types.forEach((t:any)=>{ bySlug[t.slug]=t; out.push({url:SITE_URL+'/content/'+t.slug,lastModified:now}); }); (db.contents||[]).filter((c:any)=>c&&c.status==='PUBLISHED'&&bySlug[c.typeSlug]).forEach((c:any)=>out.push({url:SITE_URL+'/content/'+c.typeSlug+'/'+c.slug,lastModified:c.updatedAt?new Date(c.updatedAt):now})); }catch{}
+ return out; }
