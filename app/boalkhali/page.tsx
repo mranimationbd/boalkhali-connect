@@ -1,4 +1,4 @@
-import Link from 'next/link'; import {Shell, SectionTitle} from '@/components/ui'; import {PLACES, placeThumb, placeShort} from '@/lib/places'; import {MapPin, Navigation, ExternalLink, ArrowRight} from 'lucide-react';
+import Link from 'next/link'; import {Shell, SectionTitle} from '@/components/ui'; import {loadBoalkhaliDb, resolvePlaces, VPlace} from '@/lib/placeView'; import {MapPin, Navigation, ExternalLink, ArrowRight} from 'lucide-react'; export const dynamic='force-dynamic';
 export const metadata = {title: 'বোয়ালখালীকে জানুন — বোয়ালখালী কানেক্ট', description: 'কর্ণফুলীর তীরে বোয়ালখালী: এক নজরে উপজেলা, দর্শনীয় স্থান, কাছাকাছি ঘোরার জায়গা, যাতায়াত, হাট-বাজার, শিক্ষা-স্বাস্থ্য, ইতিহাস ও বিখ্যাত ব্যক্তি — যাচাইকৃত তথ্যে।'};
 /* Verified local content pack: every fact is compiled from public-source research
    (~/workspace/boalkhali_research/ 01–04); items the sources marked uncertain are
@@ -12,8 +12,6 @@ const STATS: [string, string, string][] = [
  ['🎓', 'সাক্ষরতা ৭+ (২০২২)', '৮৩.৪৫%'],
 ];
 const UNIONS = ['কধুরখীল', 'পশ্চিম গোমদণ্ডী', 'শাকপুরা', 'সারোয়াতলী', 'পোপাদিয়া', 'চরণদ্বীপ', 'শ্রীপুর খরণদ্বীপ', 'আমুচিয়া', 'আহলা করলডেঙ্গা', 'বোয়ালখালী পৌরসভা'];
-const INSIDE_PLACES = PLACES.filter((p) => p.insideBoalkhali);
-const NEARBY_PLACES = PLACES.filter((p) => !p.insideBoalkhali);
 const TRANSPORT: [string, string][] = [
  ['🚌', 'প্রধান রুট: চট্টগ্রাম শহরের বহদ্দারহাট বাস টার্মিনাল থেকে বাস/CNG/টেম্পুতে কালুরঘাট সেতু হয়ে বোয়ালখালী — জেলা সদর থেকে প্রায় ১২ কিমি পূর্বে।'],
  ['🌉', 'কালুরঘাট সেতু: ১৯৩০ সালে উদ্বোধন হওয়া রেল-কাম-সড়ক সেতুই বোয়ালখালী–শহরের মূল সংযোগ; একলেনের হওয়ায় পারাপারে অপেক্ষা স্বাভাবিক, ট্রেন এলে সড়ক যান চলাচল বন্ধ থাকে।'],
@@ -45,23 +43,28 @@ const GROUPS: {name: string; desc: string; url: string; icon: string}[] = [
  {name: 'Channel Boalkhali', desc: 'বোয়ালখালী-কেন্দ্রিক একমাত্র ডেডিকেটেড স্থানীয় নিউজ চ্যানেল', url: 'https://channelboalkhali.tv', icon: '📺'},
 ];
 const CAP = 'প্রতীকী ছবি (ইলাস্ট্রেশন)';
-function PlaceCard({p}: {p: (typeof PLACES)[number]}) {
- const t = placeThumb(p);
+function PlaceCard({p}: {p: VPlace}) {
+ const t = p.images[0];
  return <Link href={'/boalkhali/' + p.slug} className="card lift press !p-0 block overflow-hidden">
-  <figure className="relative">
-   <img src={t.src} alt={p.nameBn} loading="lazy" className="aspect-[16/9] w-full object-cover"/>
-   <span className={'chip absolute left-2 top-2 shadow ' + (p.insideBoalkhali ? 'bg-brand-600 text-white' : 'bg-amber-400 text-amber-950')}>{p.insideBoalkhali ? 'বোয়ালখালীর ভিতরে' : 'বোয়ালখালীর কাছাকাছি'}</span>
-  </figure>
-  <figcaption className="bg-brand-50 px-3 py-1.5 text-[11px] text-brand-800">{t.isIllustration ? 'প্রতীকী ছবি (ইলাস্ট্রেশন)' : 'ছবি: ' + t.credit}</figcaption>
+  {t ? <figure className="relative">
+   <img src={t.url} alt={p.name} loading="lazy" className="aspect-[16/9] w-full object-cover"/>
+   <span className={'chip absolute left-2 top-2 shadow ' + (p.inside ? 'bg-brand-600 text-white' : 'bg-amber-400 text-amber-950')}>{p.inside ? 'বোয়ালখালীর ভিতরে' : 'বোয়ালখালীর কাছাকাছি'}</span>
+  </figure> : <div className="relative grid aspect-[16/9] w-full place-items-center bg-brand-50 text-4xl">📍<span className={'chip absolute left-2 top-2 shadow ' + (p.inside ? 'bg-brand-600 text-white' : 'bg-amber-400 text-amber-950')}>{p.inside ? 'বোয়ালখালীর ভিতরে' : 'বোয়ালখালীর কাছাকাছি'}</span></div>}
+  {t && <figcaption className="bg-brand-50 px-3 py-1.5 text-[11px] text-brand-800">{t.ill ? 'প্রতীকী ছবি (ইলাস্ট্রেশন)' : (t.caption ? 'ছবি: ' + t.caption : 'আসল ছবি')}</figcaption>}
   <div className="p-4 pt-3">
-   <h3 className="font-display font-bold leading-snug">{p.nameBn}</h3>
+   <h3 className="font-display font-bold leading-snug">{p.name}</h3>
    <p className="mt-1 flex items-center gap-1 text-xs font-bold text-brand-700"><MapPin size={12} className="shrink-0"/>{p.area}</p>
-   <p className="mt-2 text-sm leading-relaxed text-gray-600">{placeShort(p)}</p>
+   <p className="mt-2 text-sm leading-relaxed text-gray-600">{p.short}</p>
    <p className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-brand-700">বিস্তারিত ও ম্যাপ দেখুন <ArrowRight size={14}/></p>
   </div>
  </Link>;
 }
-export default function BoalkhaliPage() {
+export default async function BoalkhaliPage() {
+ // CMS-driven: PUBLISHED 'place' contents (admin-editable); lib/places.ts only fills in
+ // while the CMS places seed has never run, so the page can never come up empty.
+ const ALL_PLACES = resolvePlaces(await loadBoalkhaliDb());
+ const INSIDE_PLACES = ALL_PLACES.filter((p) => p.inside);
+ const NEARBY_PLACES = ALL_PLACES.filter((p) => !p.inside);
  return <Shell><main className="mx-auto max-w-6xl space-y-8 p-3 md:p-4">
   {/* (a) HERO */}
   <section className="relative overflow-hidden rounded-[28px] text-white shadow-elev-2">
