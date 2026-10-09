@@ -2,7 +2,7 @@
 // Footer (F2: brand fields now come from db.settings via SiteSettings; ui.tsx re-exports this).
 import Link from 'next/link'; import {VisitorCounter} from './VisitorCounter'; import {useSiteSettings} from './SiteSettings';
 const bn=(n:any)=>String(n??'').replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[+d]);
-export function Footer(){ const s=useSiteSettings(); const year=bn(new Date().getFullYear()); const links:[string,string][]=[['/categories','ক্যাটাগরিসমূহ'],['/emergency','জরুরি সেবা'],['/content','তথ্য ভাণ্ডার'],['/blood','রক্তদান'],['/doctors','ডাক্তার ডিরেক্টরি'],['/volunteers','স্বেচ্ছাসেবীবৃন্দ'],['/boalkhali','বোয়ালখালীকে জানুন'],['/complaint','অভিযোগ জানান'],['/about','নির্মাতা ও পরিচিতি']];
+export function Footer(){ const s=useSiteSettings(); const year=bn(new Date().getFullYear()); const links:[string,string][]=[['/categories','ক্যাটাগরিসমূহ'],['/emergency','জরুরি সেবা'],['/content','তথ্য ভাণ্ডার'],['/directory','ডিরেক্টরি ও মানচিত্র'],['/education','শিক্ষা প্রতিষ্ঠান'],['/businesses','স্থানীয় ব্যবসা'],['/blood','রক্তদান'],['/doctors','ডাক্তার ডিরেক্টরি'],['/volunteers','স্বেচ্ছাসেবীবৃন্দ'],['/boalkhali','বোয়ালখালীকে জানুন'],['/complaint','অভিযোগ জানান'],['/privacy','গোপনীয়তা নীতি'],['/terms','শর্তাবলী'],['/about','নির্মাতা ও পরিচিতি']];
  return <footer className="mt-12 border-t border-[var(--line)] bg-[var(--surface)]"><div className="mx-auto max-w-5xl px-4 py-6">
   <div className="flex items-center gap-3"><img src="/api/img/logo" alt="সাইট লোগো" className="h-10 w-10 rounded-xl shrink-0"/><div><b className="font-display">{s.siteName}</b><p className="text-[11px] text-gray-500">{s.tagline}</p></div></div>
   <VisitorCounter/>

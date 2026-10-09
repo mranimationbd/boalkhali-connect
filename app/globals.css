@@ -32,3 +32,6 @@ input,select,textarea{border:1px solid var(--line);border-radius:var(--r-md);pad
 .skel::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.65) 50%,transparent 70%);animation:skel-shine 1.4s infinite}
 @keyframes skel-shine{to{transform:translateX(100%)}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.bk-marker{position:relative;width:26px;height:26px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:#059669;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}
+.bk-marker::after{content:'';position:absolute;inset:7px;border-radius:50%;background:#fff}
+.maplibregl-popup-content{font-family:inherit;border-radius:12px;line-height:1.45}
