@@ -4,16 +4,54 @@ export const DB_PATH=process.env.DB_PATH||(ON_VERCEL?'/tmp/boalkhali-db.json':pa
 export const UPLOAD_DIR=process.env.UPLOAD_DIR||(ON_VERCEL?'/tmp/boalkhali-uploads':path.join(process.cwd(),'public','uploads'));
 export const UPLOAD_QUOTA_BYTES=Math.floor((Number(process.env.UPLOAD_QUOTA_GB)||5)*1024*1024*1024); // posting uploads quota: 5 GB (user, 2026-10-08)
 // ---- DB backend selection (2026-10-08): Firestore when all 3 service-account env vars are set, else local file ----
-// Firestore stores the ENTIRE DB as one JSON string in doc bk_state/main (~22KB today; Firestore doc limit 1MB — revisit if state grows past ~800KB).
+// Firestore stores the ENTIRE DB as one JSON string in doc bk_state/main (~22KB today; Firestore doc limit 1MB — revisit if state grows past ~800KB). The doc additionally carries a numeric `v` field: the optimistic-concurrency version used by mutateDBAsync/writeDBAsync (see the concurrency core below).
 export const DB_BACKEND:'firestore'|'file'=(process.env.FIREBASE_PROJECT_ID&&process.env.FIREBASE_CLIENT_EMAIL&&process.env.FIREBASE_PRIVATE_KEY)?'firestore':'file';
-let _fsDb:any=null; let _fsInit:Promise<any>|null=null; let _fsCache:{db:any,at:number}|null=null; const FS_TTL_MS=3000;
+let _fsDb:any=null; let _fsInit:Promise<any>|null=null; let _fsCache:{db:any,at:number,v:number}|null=null; const FS_TTL_MS=3000;
+// ---- Concurrency core (2026-10-09 data-integrity batch) ----
+// Root cause of the audit's silent data loss: readDBAsync hands out a whole-state snapshot and
+// writeDBAsync wrote the whole state straight back, so any writer holding a stale snapshot
+// (Firestore network latency + the 3s cache above, concurrent serverless instances, or an await
+// between read and write) silently overwrote newer records — posts/users vanished with no error.
+// Fix, two layers: (1) mutateDBAsync(fn) re-reads fresh state and applies fn under an optimistic
+// version check (Firestore transaction on the doc's `v` field, re-running fn on mismatch) or a
+// single-process FIFO queue (file backend). High-risk routes use it: register, session creation
+// (login/firebase), post create, moderate, admin users, secret intake/actions, track, upload bytes.
+// (2) Legacy writeDBAsync(db) can no longer clobber: every readDBAsync result is stamped
+// (WeakMap, invisible to JSON) with its base snapshot; if the stored state has moved on by write
+// time, a three-way merge — per top-level key, id-keyed inside arrays — keeps BOTH writers'
+// changes instead of dropping one side wholesale.
+// RESIDUAL RISK (honest): two writers editing the SAME record concurrently still resolve
+// last-writer-wins for that record, and a delete racing an edit of the same record resolves to
+// the delete. Scalars inside shared objects (e.g. meta.*) are not field-merged. bk_state/main
+// also remains ONE Firestore document (~1MB ceiling): splitting into per-collection documents
+// is the eventual cure and is still owed. Unknown top-level keys pass through merges untouched.
+const _dbBase=new WeakMap<object,{v:number,snap:string}>();
+function _stamp(db:any,v:number){ try{ _dbBase.set(db,{v,snap:JSON.stringify(db)}); }catch{} return db; }
+const _jeq=(a:any,b:any)=>{ try{ return JSON.stringify(a)===JSON.stringify(b); }catch{ return a===b; } };
+function _mergeArr(base:any[],mine:any[],cur:any[]):any[]{ const keyOf=(r:any)=>(r&&typeof r==='object'&&r.id!==undefined&&r.id!==null)?String(r.id):null; if([...base,...mine,...cur].some(r=>keyOf(r)===null)) return mine; const bm=new Map(base.map(r=>[keyOf(r),r])), mm=new Map(mine.map(r=>[keyOf(r),r])), cm=new Map(cur.map(r=>[keyOf(r),r])); const out:any[]=[]; const seen=new Set<string>();
+ for(const r of mine){ const k=keyOf(r) as string; if(!bm.has(k)&&!cm.has(k)){ out.push(r); seen.add(k); } }
+ for(const r of cur){ const k=keyOf(r) as string; if(seen.has(k)) continue; seen.add(k); if(!mm.has(k)){ if(bm.has(k)) continue; out.push(r); continue; } const m=mm.get(k), b=bm.get(k); out.push(b!==undefined&&_jeq(m,b)?r:m); }
+ for(const r of mine){ const k=keyOf(r) as string; if(seen.has(k)) continue; seen.add(k); if(!cm.has(k)&&bm.has(k)) continue; out.push(r); }
+ return out; }
+function _merge3(base:any,mine:any,cur:any):any{ const out:any={}; const keys=Array.from(new Set([...Object.keys(base||{}),...Object.keys(mine||{}),...Object.keys(cur||{})])); for(const k of keys){ const b=base?base[k]:undefined, m=mine?mine[k]:undefined, c=cur?cur[k]:undefined; if(_jeq(m,b)) out[k]=c; else if(_jeq(c,b)) out[k]=m; else if(Array.isArray(m)&&Array.isArray(c)) out[k]=_mergeArr(Array.isArray(b)?b:[],m,c); else out[k]=m; } return out; }
+let _fileQ:Promise<any>=Promise.resolve();
+function _withFileLock<T>(f:()=>Promise<T>):Promise<T>{ const run=_fileQ.then(f,f); _fileQ=run.then(()=>undefined,()=>undefined); return run; }
+export async function mutateDBAsync<T>(fn:(db:any)=>T|Promise<T>):Promise<T>{
+ if(DB_BACKEND==='file'){ return _withFileLock(async()=>{ const db=_stamp(readFileDB(),0); const out=await fn(db); writeFileDB(db); return out; }); }
+ const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main');
+ for(let i=0;i<8;i++){ let db:any, v=0; const snap=await ref.get(); if(!snap.exists){ db=normalizeDB(seedDB()); } else { const d:any=snap.data()||{}; v=Number(d.v)||0; try{ db=normalizeDB(JSON.parse(d.json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } }
+  const out=await fn(db); const json=JSON.stringify(db); let ok=false;
+  await fsdb.runTransaction(async(tx:any)=>{ const s2=await tx.get(ref); const curV=s2.exists?Number((s2.data()||{}).v)||0:0; if(curV!==v) return; tx.set(ref,{json,v:v+1,updatedAt:new Date().toISOString()}); ok=true; });
+  if(ok){ _fsCache={db:JSON.parse(json),at:Date.now(),v:v+1}; return out; }
+  await new Promise(r=>setTimeout(r,20*(i+1))); }
+ throw new Error('DB_WRITE_CONTENTION: mutation failed after 8 retries'); }
 async function firebaseAdmin():Promise<any>{ try{ const mod:any=await import('firebase-admin'); const admin=mod.default||mod; if(!admin.apps.length){ admin.initializeApp({credential:admin.credential.cert({projectId:process.env.FIREBASE_PROJECT_ID as string,clientEmail:process.env.FIREBASE_CLIENT_EMAIL as string,privateKey:(process.env.FIREBASE_PRIVATE_KEY as string).replace(/\\n/g,'\n')})}); } return admin; }catch(e:any){ throw new Error('FIRESTORE_INIT_FAILED: '+(e?.message||e)); } }
 export async function getFirebaseAdmin():Promise<any>{ if(DB_BACKEND!=='firestore') throw new Error('FIREBASE_NOT_CONFIGURED'); return firebaseAdmin(); }
 async function firestoreDB():Promise<any>{ if(_fsDb) return _fsDb; if(_fsInit) return _fsInit; _fsInit=(async()=>{ const admin=await firebaseAdmin(); _fsDb=admin.firestore(); return _fsDb; })(); return _fsInit; }
 export function uploadUsageBytes(){ try{ return fs.readdirSync(UPLOAD_DIR).reduce((a,f)=>{try{return a+fs.statSync(path.join(UPLOAD_DIR,f)).size}catch{return a}},0);}catch{return 0} }
 // Persisted upload-byte counter (single source of truth for quota + health panel). Incremented by lib/imageStore on every save/delete.
 export function uploadCounterBytes(db:any){ return (db&&db.meta&&typeof db.meta.uploadBytesUsed==='number')?db.meta.uploadBytesUsed:0; }
-export async function addUploadBytes(n:number){ const db=await readDBAsync(); if(!db.meta||typeof db.meta!=='object'||Array.isArray(db.meta)) db.meta={uploadBytesUsed:0}; db.meta.uploadBytesUsed=Math.max(0,(Number(db.meta.uploadBytesUsed)||0)+n); await writeDBAsync(db); return db.meta.uploadBytesUsed; }
+export async function addUploadBytes(n:number){ return mutateDBAsync((db:any)=>{ if(!db.meta||typeof db.meta!=='object'||Array.isArray(db.meta)) db.meta={uploadBytesUsed:0}; db.meta.uploadBytesUsed=Math.max(0,(Number(db.meta.uploadBytesUsed)||0)+n); return db.meta.uploadBytesUsed; }); }
 export type Role='CITIZEN'|'BUSINESS'|'SERVICE_PROVIDER'|'MODERATOR'|'ADMIN'|'SUPER_ADMIN';
 export function id(p='id'){return p+'_'+crypto.randomBytes(6).toString('hex')}
 export function now(){return new Date().toISOString()}
@@ -47,11 +85,23 @@ function seedDB(){
 // "Cannot read properties of undefined" (root cause of the 2026-10-08 admin 500s: pages read collections
 // the seed never created). New collections used anywhere MUST be added here.
 export const DB_COLLECTIONS=['users','roles','categories','subcategories','locations','feature_flags','posts','post_images','saved_posts','restaurants','menus','doctors','blood_donors','blood_requests','jobs','services','service_providers','lost_found','complaints','secret_reports','emergency_alerts','announcements','notifications','advertisements','memberships','reviews','transport_routes','transport_schedules','audit_logs','system_metrics','sessions','tokens','volunteers','reports','post_comments','visits'];
-export function normalizeDB(d:any):any{ if(!d||typeof d!=='object'||Array.isArray(d)) d={}; for(const k of DB_COLLECTIONS){ if(!Array.isArray(d[k])) d[k]=[]; } if(!d.visitStats||typeof d.visitStats!=='object'||Array.isArray(d.visitStats)) d.visitStats={total:0,byDay:{}}; if(typeof d.visitStats.total!=='number') d.visitStats.total=0; if(!d.visitStats.byDay||typeof d.visitStats.byDay!=='object') d.visitStats.byDay={}; if(!d.meta||typeof d.meta!=='object'||Array.isArray(d.meta)) d.meta={}; if(typeof d.meta.uploadBytesUsed!=='number') d.meta.uploadBytesUsed=0; if(!d.vanalytics||typeof d.vanalytics!=='object'||Array.isArray(d.vanalytics)) d.vanalytics={days:{},total:0,since:null,logs:[]}; if(!d.vanalytics.days||typeof d.vanalytics.days!=='object'||Array.isArray(d.vanalytics.days)) d.vanalytics.days={}; if(typeof d.vanalytics.total!=='number') d.vanalytics.total=0; if(!Array.isArray(d.vanalytics.logs)) d.vanalytics.logs=[]; return d; }
+export function normalizeDB(d:any):any{ if(!d||typeof d!=='object'||Array.isArray(d)) d={}; for(const k of DB_COLLECTIONS){ if(!Array.isArray(d[k])) d[k]=[]; } if(!d.visitStats||typeof d.visitStats!=='object'||Array.isArray(d.visitStats)) d.visitStats={total:0,byDay:{}}; if(typeof d.visitStats.total!=='number') d.visitStats.total=0; if(!d.visitStats.byDay||typeof d.visitStats.byDay!=='object') d.visitStats.byDay={}; if(!d.meta||typeof d.meta!=='object'||Array.isArray(d.meta)) d.meta={}; if(typeof d.meta.uploadBytesUsed!=='number') d.meta.uploadBytesUsed=0; if(!d.vanalytics||typeof d.vanalytics!=='object'||Array.isArray(d.vanalytics)) d.vanalytics={days:{},total:0,since:null,logs:[]}; if(!d.vanalytics.days||typeof d.vanalytics.days!=='object'||Array.isArray(d.vanalytics.days)) d.vanalytics.days={}; if(typeof d.vanalytics.total!=='number') d.vanalytics.total=0; if(!Array.isArray(d.vanalytics.logs)) d.vanalytics.logs=[];
+ // Blood-request status canonicalization (2026-10-09): legacy records were written as 'OPEN'
+ // while the dashboard counts only 'ACTIVE' — the two views disagreed. ACTIVE is now the single
+ // canonical open-state: every read normalizes OPEN -> ACTIVE, and the create path writes ACTIVE
+ // only, so any subsequent write persists the canonical value. isOpen() readers still accept both.
+ if(Array.isArray(d.blood_requests)) for(const r of d.blood_requests){ if(r&&r.status==='OPEN') r.status='ACTIVE'; }
+ return d; }
 function readFileDB():any{ try{ if(!fs.existsSync(DB_PATH)){const d=seedDB(); writeFileDB(d); return d;} return normalizeDB(JSON.parse(fs.readFileSync(DB_PATH,'utf8')));}catch{ const d=seedDB(); writeFileDB(d); return d;}}
 function writeFileDB(d:any){ fs.mkdirSync(path.dirname(DB_PATH),{recursive:true}); const t=DB_PATH+'.tmp'; fs.writeFileSync(t,JSON.stringify(d,null,2)); fs.renameSync(t,DB_PATH);}
-export async function readDBAsync():Promise<any>{ if(DB_BACKEND==='file') return readFileDB(); if(_fsCache&&Date.now()-_fsCache.at<FS_TTL_MS) return JSON.parse(JSON.stringify(_fsCache.db)); const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); let snap:any; try{ snap=await ref.get(); }catch(e:any){ throw new Error('FIRESTORE_READ_FAILED: '+(e?.message||e)); } if(!snap.exists){ const d=seedDB(); await writeDBAsync(d); return d; } let db:any; try{ db=normalizeDB(JSON.parse((snap.data()||{}).json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } _fsCache={db,at:Date.now()}; return JSON.parse(JSON.stringify(db)); }
-export async function writeDBAsync(d:any):Promise<void>{ if(DB_BACKEND==='file'){ writeFileDB(d); return; } const fsdb=await firestoreDB(); const json=JSON.stringify(d); try{ await fsdb.collection('bk_state').doc('main').set({json,updatedAt:new Date().toISOString()}); }catch(e:any){ throw new Error('FIRESTORE_WRITE_FAILED: '+(e?.message||e)); } _fsCache={db:JSON.parse(json),at:Date.now()}; }
+export async function readDBAsync():Promise<any>{ if(DB_BACKEND==='file') return _stamp(readFileDB(),0); if(_fsCache&&Date.now()-_fsCache.at<FS_TTL_MS) return _stamp(JSON.parse(JSON.stringify(_fsCache.db)),_fsCache.v); const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); let snap:any; try{ snap=await ref.get(); }catch(e:any){ throw new Error('FIRESTORE_READ_FAILED: '+(e?.message||e)); } if(!snap.exists){ const d=seedDB(); await writeDBAsync(d); return _stamp(JSON.parse(JSON.stringify(d)),1); } let db:any; const v=Number((snap.data()||{}).v)||0; try{ db=normalizeDB(JSON.parse((snap.data()||{}).json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } _fsCache={db,at:Date.now(),v}; return _stamp(JSON.parse(JSON.stringify(db)),v); }
+export async function writeDBAsync(d:any):Promise<void>{ const st=_dbBase.get(d);
+ if(DB_BACKEND==='file'){ if(!st){ writeFileDB(d); return; } const base=JSON.parse(st.snap); const cur=readFileDB(); writeFileDB(_jeq(cur,base)?d:_merge3(base,d,cur)); return; }
+ const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main');
+ if(!st){ const json=JSON.stringify(d); let nv=1; try{ await fsdb.runTransaction(async(tx:any)=>{ const s=await tx.get(ref); nv=(s.exists?Number((s.data()||{}).v)||0:0)+1; tx.set(ref,{json,v:nv,updatedAt:new Date().toISOString()}); }); }catch(e:any){ throw new Error('FIRESTORE_WRITE_FAILED: '+(e?.message||e)); } _fsCache={db:JSON.parse(json),at:Date.now(),v:nv}; return; }
+ const base=JSON.parse(st.snap); let finalDb:any=d, newV=0;
+ try{ await fsdb.runTransaction(async(tx:any)=>{ const s=await tx.get(ref); const curV=s.exists?Number((s.data()||{}).v)||0:0; newV=curV+1; if(curV===st.v){ tx.set(ref,{json:JSON.stringify(d),v:newV,updatedAt:new Date().toISOString()}); finalDb=d; } else { let curDb:any={}; if(s.exists){ try{ curDb=normalizeDB(JSON.parse((s.data()||{}).json||'')); }catch{ curDb={}; } } finalDb=_merge3(base,d,curDb); tx.set(ref,{json:JSON.stringify(finalDb),v:newV,updatedAt:new Date().toISOString()}); } }); }catch(e:any){ throw new Error('FIRESTORE_WRITE_FAILED: '+(e?.message||e)); }
+ _fsCache={db:JSON.parse(JSON.stringify(finalDb)),at:Date.now(),v:newV}; }
 export function audit(db:any,actor:string,action:string,target:string,meta:any={}){ db.audit_logs.unshift({id:id('log'),actor,action,target,metadata:meta,createdAt:now()}); }
 export function sanitize(s:any){ return String(s||'').replace(/<[^>]*>/g,'').trim().slice(0,5000); }
 // Public projection of a post: moderation metadata never leaves the server, and when the
