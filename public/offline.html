@@ -1,1 +1,125 @@
-<html lang=bn><body><h1>অফলাইন — ইন্টারনেট সংযোগ নেই</h1><p>লাইভ সেবা অফলাইনে কাজ করবে না।</p></body></html>
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>অফলাইন মিনি গেমস</title>
+<style>
+:root{--bg:#081c15;--panel:#ffffff10;--line:#ffffff25;--green:#95d5b2;--text:#f1faee;--muted:#bdd5c6;--gold:#ffca3a}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:16px;font-family:system-ui,"Noto Sans Bengali",sans-serif;background:radial-gradient(circle at top,#1b4332,var(--bg) 70%);color:var(--text)}
+main{width:min(850px,100%);margin:0 auto}
+header{text-align:center;padding:20px 0}
+h1{font-size:clamp(2rem,7vw,3.2rem);margin:8px 0}
+p{color:var(--muted);line-height:1.6}
+.pill{display:inline-block;background:var(--green);color:#102a20;border-radius:99px;padding:6px 12px;font-weight:800;font-size:.85rem}
+.menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:20px;text-align:left;color:inherit;cursor:pointer;transition:transform .15s,background .15s;width:100%}
+.card:hover{transform:translateY(-3px);background:#ffffff18}
+.emoji{font-size:2.8rem}.card h2{margin:8px 0}.card p{margin:0}
+.view{display:none;text-align:center;border:1px solid var(--line);background:var(--panel);border-radius:22px;padding:18px}
+.view.active{display:block}.menu.active{display:grid}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:11px 16px;background:var(--green);color:#102a20;font-weight:800;margin:5px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.back{background:transparent;border:1px solid var(--line);color:var(--text)}
+.score{font-size:1.1rem;font-weight:800;margin:12px}.muted{color:var(--muted)}
+canvas{display:block;width:min(88vw,420px);height:min(88vw,420px);background:#142d22;border:2px solid var(--green);border-radius:12px;margin:12px auto;touch-action:manipulation}
+.pad{display:grid;grid-template-columns:repeat(3,54px);gap:5px;justify-content:center}.pad button{margin:0;padding:12px 0}
+.memory-board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:420px;margin:18px auto}
+.tile{aspect-ratio:1;font-size:clamp(1.5rem,7vw,2.5rem);padding:0;background:#24533e;color:white;border:1px solid var(--line);margin:0}
+.tile.done{background:#3a7d5b;opacity:.7}
+.ttt-board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(85vw,360px);margin:18px auto}
+.cell{aspect-ratio:1;font-size:clamp(2rem,12vw,4rem);background:#173c2b;color:var(--text);border:1px solid var(--green);margin:0}
+.arena{background:#173c2b;border:2px dashed var(--green);border-radius:20px;padding:26px;margin:18px 0}
+#tap{font-size:1.5rem;width:160px;height:160px;border-radius:50%;background:var(--gold);color:#26321f;box-shadow:0 8px 0 #b88714}
+footer{text-align:center;font-size:.9rem;color:var(--muted);padding:22px 0}
+</style>
+</head>
+<body>
+<main>
+<header id="homeHeader"><span class="pill">১০০% অফলাইন • একটি HTML ফাইল</span><h1>🎮 অফলাইন মিনি গেমস</h1><p>পছন্দের গেমে চাপ দিয়ে প্রবেশ করুন। খেলতে ইন্টারনেট লাগবে না।</p></header>
+
+<section id="menu" class="menu active">
+<button class="card" onclick="openGame('snake')"><div class="emoji">🐍</div><h2>১. স্নেক গেম</h2><p>খাবার সংগ্রহ করুন এবং নিজের গায়ে বা দেয়ালে ধাক্কা লাগানো এড়িয়ে চলুন।</p></button>
+<button class="card" onclick="openGame('memory')"><div class="emoji">🧠</div><h2>২. মেমোরি ম্যাচ</h2><p>কার্ড উল্টে একই ছবির জোড়া খুঁজে বের করুন।</p></button>
+<button class="card" onclick="openGame('ttt')"><div class="emoji">⭕</div><h2>৩. টিক-ট্যাক-টো</h2><p>কম্পিউটারের সঙ্গে X/O খেলুন।</p></button>
+<button class="card" onclick="openGame('clicker')"><div class="emoji">⚡</div><h2>৪. দ্রুত ট্যাপ</h2><p>২০ সেকেন্ডে যত বেশি সম্ভব ট্যাপ করুন।</p></button>
+</section>
+
+<section id="snake" class="view">
+<button class="back" onclick="goHome()">← সব গেম</button><h1>🐍 স্নেক গেম</h1><div class="score">স্কোর: <span id="snakeScore">0</span></div>
+<canvas id="snakeCanvas" width="420" height="420"></canvas><p class="muted">Arrow key বা নিচের দিকনির্দেশক বোতাম ব্যবহার করুন।</p>
+<button onclick="startSnake()">নতুন গেম</button><div class="pad"><span></span><button onclick="snakeDir(0,-1)">⬆️</button><span></span><button onclick="snakeDir(-1,0)">⬅️</button><button onclick="snakeDir(0,1)">⬇️</button><button onclick="snakeDir(1,0)">➡️</button></div><p id="snakeMsg" class="muted"></p>
+</section>
+
+<section id="memory" class="view">
+<button class="back" onclick="goHome()">← সব গেম</button><h1>🧠 মেমোরি ম্যাচ</h1><div class="score">চাল: <span id="moves">0</span> · জোড়া: <span id="pairs">0</span>/8</div>
+<div id="memoryBoard" class="memory-board"></div><p id="memoryMsg" class="muted"></p><button onclick="initMemory()">আবার খেলুন</button>
+</section>
+
+<section id="ttt" class="view">
+<button class="back" onclick="goHome()">← সব গেম</button><h1>⭕ টিক-ট্যাক-টো</h1><p class="muted">আপনি X, কম্পিউটার O</p>
+<div id="tttBoard" class="ttt-board"></div><h2 id="tttStatus">আপনার চাল (X)</h2><button onclick="resetTTT()">নতুন ম্যাচ</button>
+</section>
+
+<section id="clicker" class="view">
+<button class="back" onclick="goHome()">← সব গেম</button><h1>⚡ দ্রুত ট্যাপ</h1><p class="muted">২০ সেকেন্ডে যত বেশি সম্ভব ট্যাপ করুন!</p>
+<div class="score">সময়: <span id="time">20</span> সেকেন্ড · স্কোর: <span id="clickScore">0</span></div>
+<div class="arena"><button id="tap" onclick="hit()">ট্যাপ!</button></div><button id="clickStart" onclick="beginClicker()">শুরু করুন</button><p id="clickMsg" class="muted">শুরু করতে “শুরু করুন” চাপুন।</p>
+</section>
+<footer>সব গেম এই এক HTML ফাইলের ভেতরে আছে। বাইরের কোনো ফাইল বা ইন্টারনেটের প্রয়োজন নেই।</footer>
+</main>
+<script>
+// Navigation
+let currentGame=null;
+function openGame(id){
+  document.getElementById('menu').classList.remove('active');
+  document.getElementById('homeHeader').style.display='none';
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');currentGame=id;
+  if(id==='snake')startSnake();
+  if(id==='memory')initMemory();
+  if(id==='ttt')resetTTT();
+  if(id==='clicker')resetClicker();
+}
+function goHome(){
+  stopSnake();clearInterval(clickInterval);clickActive=false;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('menu').classList.add('active');
+  document.getElementById('homeHeader').style.display='block';currentGame=null;
+}
+
+// Snake
+const sc=document.getElementById('snakeCanvas'),sx=sc.getContext('2d'),SN=21,SS=20;
+let snake=[],food={x:5,y:5},sdx=1,sdy=0,snakeTimer=null,snakeDead=false,snakeScore=0;
+function stopSnake(){clearInterval(snakeTimer);snakeTimer=null}
+function startSnake(){stopSnake();snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];sdx=1;sdy=0;snakeDead=false;snakeScore=0;document.getElementById('snakeScore').textContent='0';document.getElementById('snakeMsg').textContent='';placeFood();drawSnake();snakeTimer=setInterval(snakeStep,120)}
+function placeFood(){do{food={x:Math.floor(Math.random()*SN),y:Math.floor(Math.random()*SN)}}while(snake.some(p=>p.x===food.x&&p.y===food.y))}
+function snakeDir(a,b){if(a!==-sdx||b!==-sdy){sdx=a;sdy=b}}
+function snakeStep(){if(snakeDead)return;const h={x:snake[0].x+sdx,y:snake[0].y+sdy};if(h.x<0||h.y<0||h.x>=SN||h.y>=SN||snake.some(p=>p.x===h.x&&p.y===h.y)){snakeDead=true;stopSnake();document.getElementById('snakeMsg').textContent='গেম ওভার! আবার খেলতে নতুন গেম চাপুন।';return}snake.unshift(h);if(h.x===food.x&&h.y===food.y){snakeScore++;document.getElementById('snakeScore').textContent=snakeScore;placeFood()}else snake.pop();drawSnake()}
+function drawSnake(){sx.clearRect(0,0,420,420);sx.fillStyle='#ffca3a';sx.fillRect(food.x*SS+2,food.y*SS+2,SS-4,SS-4);snake.forEach((p,i)=>{sx.fillStyle=i?'#52b788':'#b7efc5';sx.fillRect(p.x*SS+1,p.y*SS+1,SS-2,SS-2)})}
+document.addEventListener('keydown',e=>{if(currentGame!=='snake')return;const m={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};if(m[e.key]){e.preventDefault();snakeDir(...m[e.key])}});
+
+// Memory match
+const faces=['🍎','🚀','🐱','🌙','⚽','🌻','🎧','🐢'];let firstCard=null,memoryLock=false,moveCount=0,pairCount=0;
+function initMemory(){firstCard=null;memoryLock=false;moveCount=0;pairCount=0;document.getElementById('moves').textContent='0';document.getElementById('pairs').textContent='0';document.getElementById('memoryMsg').textContent='';const deck=[...faces,...faces].sort(()=>Math.random()-.5),board=document.getElementById('memoryBoard');board.innerHTML='';deck.forEach(face=>{const b=document.createElement('button');b.className='tile';b.textContent='?';b.dataset.face=face;b.onclick=()=>flipCard(b);board.appendChild(b)})}
+function flipCard(btn){if(memoryLock||btn.classList.contains('done')||btn===firstCard||btn.textContent!=='?')return;btn.textContent=btn.dataset.face;if(!firstCard){firstCard=btn;return}moveCount++;document.getElementById('moves').textContent=moveCount;if(firstCard.dataset.face===btn.dataset.face){firstCard.classList.add('done');btn.classList.add('done');firstCard=null;pairCount++;document.getElementById('pairs').textContent=pairCount;if(pairCount===8)document.getElementById('memoryMsg').textContent='দারুণ! '+moveCount+' চালে সব জোড়া পেয়েছেন।'}else{memoryLock=true;const old=firstCard;firstCard=null;setTimeout(()=>{old.textContent='?';btn.textContent='?';memoryLock=false},700)}}
+
+// Tic-tac-toe
+let cells=[],tttOver=false,tttThinking=false;const wins=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+function resetTTT(){cells=Array(9).fill('');tttOver=false;tttThinking=false;document.getElementById('tttStatus').textContent='আপনার চাল (X)';const b=document.getElementById('tttBoard');b.innerHTML='';cells.forEach((_,i)=>{const q=document.createElement('button');q.className='cell';q.onclick=()=>playTTT(i);b.appendChild(q)});renderTTT()}
+function renderTTT(){[...document.querySelectorAll('#tttBoard .cell')].forEach((b,i)=>b.textContent=cells[i])}
+function tttResult(){for(const w of wins)if(w.every(i=>cells[i]&&cells[i]===cells[w[0]]))return cells[w[0]];return cells.every(Boolean)?'draw':null}
+function checkTTT(){const r=tttResult();if(r){tttOver=true;document.getElementById('tttStatus').textContent=r==='draw'?'ড্র হয়েছে!':r==='X'?'আপনি জিতেছেন! 🎉':'কম্পিউটার জিতেছে!';return true}return false}
+function playTTT(i){if(tttOver||tttThinking||cells[i])return;cells[i]='X';renderTTT();if(checkTTT())return;tttThinking=true;document.getElementById('tttStatus').textContent='কম্পিউটার ভাবছে…';setTimeout(()=>{if(currentGame!=='ttt')return;const m=bestTTTMove();if(m!==undefined)cells[m]='O';renderTTT();tttThinking=false;checkTTT();if(!tttOver)document.getElementById('tttStatus').textContent='আপনার চাল (X)'},250)}
+function bestTTTMove(){for(const mark of ['O','X'])for(let i=0;i<9;i++)if(!cells[i]){cells[i]=mark;const win=wins.some(w=>w.every(j=>cells[j]===mark));cells[i]='';if(win)return i}if(!cells[4])return 4;const corners=[0,2,6,8].filter(i=>!cells[i]);if(corners.length)return corners[Math.floor(Math.random()*corners.length)];const rest=cells.map((v,i)=>v?null:i).filter(v=>v!==null);return rest[Math.floor(Math.random()*rest.length)]}
+
+// Clicker
+let clickScore=0,clickTime=20,clickActive=false,clickInterval=null;
+function resetClicker(){clearInterval(clickInterval);clickActive=false;clickScore=0;clickTime=20;document.getElementById('clickScore').textContent='0';document.getElementById('time').textContent='20';document.getElementById('tap').disabled=true;document.getElementById('clickStart').disabled=false;document.getElementById('clickMsg').textContent='শুরু করতে “শুরু করুন” চাপুন।'}
+function beginClicker(){clearInterval(clickInterval);clickScore=0;clickTime=20;clickActive=true;document.getElementById('clickScore').textContent='0';document.getElementById('time').textContent='20';document.getElementById('clickMsg').textContent='চালিয়ে যান!';document.getElementById('tap').disabled=false;document.getElementById('clickStart').disabled=true;clickInterval=setInterval(()=>{clickTime--;document.getElementById('time').textContent=clickTime;if(clickTime<=0){clickActive=false;clearInterval(clickInterval);document.getElementById('tap').disabled=true;document.getElementById('clickStart').disabled=false;document.getElementById('clickMsg').textContent='সময় শেষ! আপনার স্কোর '+clickScore+'। আবার খেলুন!'}},1000)}
+function hit(){if(!clickActive)return;clickScore++;document.getElementById('clickScore').textContent=clickScore}
+resetClicker();
+</script>
+</body>
+</html>
