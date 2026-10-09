@@ -26,4 +26,8 @@ export function searchAll(db:any,qRaw:string,f:{category?:string,area?:string,mi
  const donors=q?(db.blood_donors||[]).filter((d:any)=>{ if(g) return String(d.bloodGroup||'').toUpperCase()===g; if(wantBlood) return true; return matchField(false,d.name,d.bloodGroup,d.location,d.area); }):[];
  const doctors=q?(db.doctors||[]).filter((d:any)=>wantDoctor||matchField(false,d.name,d.specialty,d.chamber,d.address)):[];
  const jobs=q?(wantJobs?(db.jobs||[]):(db.jobs||[]).filter((j:any)=>matchField(false,j.title,j.company,j.location,j.desc))):[]; const restaurants=q?(db.restaurants||[]).filter((r:any)=>matchField(false,r.name,r.category,r.location,r.menu)):[];
- return {posts,donors,doctors,jobs,restaurants}; }
+ // CMS contents: ONLY published items of enabled, public types — drafts/pending/archived/
+ // trashed are hard-excluded from public search exactly as they 404 on public routes.
+ const pubTypes=new Set((db.content_types||[]).filter((t:any)=>t&&t.enabled!==false&&t.publicListing).map((t:any)=>t.slug)); const typeName:any={}; (db.content_types||[]).forEach((t:any)=>{ typeName[t.slug]=t.nameBn||t.nameEn||t.slug; });
+ const contents=q?(db.contents||[]).filter((c:any)=>c&&c.status==='PUBLISHED'&&pubTypes.has(c.typeSlug)).filter((c:any)=>matchField(false,c.titleBn,c.titleEn,c.shortDesc,c.slug,typeName[c.typeSlug],(c.tags||[]).join(' '))).map((c:any)=>({id:c.id,typeSlug:c.typeSlug,typeName:typeName[c.typeSlug]||c.typeSlug,slug:c.slug,title:c.titleBn||c.titleEn,shortDesc:c.shortDesc||'',href:'/content/'+c.typeSlug+'/'+c.slug})):[];
+ return {posts,donors,doctors,jobs,restaurants,contents}; }

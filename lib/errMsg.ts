@@ -45,6 +45,21 @@ export const ERR_MSG: Record<string, string> = {
   NOTHING_TO_CHANGE: 'কোনো পরিবর্তন দেওয়া হয়নি',
   RETENTION_RANGE: 'সংরক্ষণের মেয়াদ ৩০ থেকে ৯০ দিনের মধ্যে হতে হবে',
   STATS_UNAVAILABLE: 'পরিসংখ্যান আপাতত পাওয়া যাচ্ছে না — পরে আবার চেষ্টা করুন',
+  CMS_TITLE_REQUIRED: 'অন্তত একটি শিরোনাম (বাংলা বা ইংরেজি) দিতে হবে',
+  SLUG_TAKEN: 'এই slug আগেই ব্যবহার হয়েছে — অন্য slug দিন',
+  SLUG_IMMUTABLE: 'কনটেন্ট থাকা টাইপের slug বদলানো যায় না',
+  INVALID_SLUG: 'Slug সঠিক নয় (ছোট হাতের অক্ষর, সংখ্যা, বাংলা ও হাইফেন)',
+  INVALID_FIELD: 'একটি ফিল্ডের মান সঠিক নয়',
+  FIELD_REQUIRED: 'আবশ্যক ফিল্ড পূরণ করুন',
+  TYPE_NOT_FOUND: 'কনটেন্ট টাইপ পাওয়া যায়নি',
+  TYPE_IN_USE: 'এই টাইপে কনটেন্ট আছে — আগে সেগুলো সরান বা টাইপটি নিষ্ক্রিয় করুন',
+  CATEGORY_IN_USE: 'এই ক্যাটাগরিতে কনটেন্ট/পোস্ট আছে — মোছা যাবে না',
+  LOCATION_IN_USE: 'এই এলাকার নাম কনটেন্ট/পোস্টে ব্যবহৃত হচ্ছে — মোছা যাবে না',
+  CONTENT_NOT_FOUND: 'কনটেন্ট পাওয়া যায়নি',
+  MEDIA_IN_USE: 'এই ছবি কনটেন্টে ব্যবহৃত হচ্ছে — আগে সেখান থেকে সরান',
+  INVALID_STATUS_ACTION: 'এই অবস্থা-পরিবর্তনটি করা যাবে না',
+  PERMANENT_DELETE_TRASH_ONLY: 'স্থায়ীভাবে মুছতে হলে আগে ট্র্যাশে পাঠান',
+  TYPE_REQUIRED: 'কনটেন্ট টাইপ নির্বাচন করুন',
 };
 export function errMsg(code?: string | null): string {
   if (!code) return 'দুঃখিত, কিছু সমস্যা হয়েছে — আবার চেষ্টা করুন';

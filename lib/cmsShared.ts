@@ -1,0 +1,5 @@
+// Client-safe CMS constants (no server imports — lib/cms.ts re-exports these for server code).
+export const FIELD_TYPES=['Text','Textarea','RichText','Number','Email','Phone','URL','Date','Time','Select','MultiSelect','Checkbox','Toggle','Image','MultipleImages','File','Location','GoogleMapsURL'];
+export const CONTENT_STATUSES=['DRAFT','PENDING','PUBLISHED','UNPUBLISHED','ARCHIVED','TRASHED'];
+export const STATUS_LABELS:Record<string,string>={DRAFT:'খসড়া',PENDING:'পর্যালোচনার অপেক্ষায়',PUBLISHED:'প্রকাশিত',UNPUBLISHED:'অপ্রকাশিত',ARCHIVED:'আর্কাইভ',TRASHED:'ট্র্যাশ'};
+export const FIELD_TYPE_LABELS:Record<string,string>={Text:'ছোট লেখা (Text)',Textarea:'বড় লেখা (Textarea)',RichText:'রিচ টেক্সট',Number:'সংখ্যা',Email:'ইমেইল',Phone:'ফোন',URL:'লিংক (URL)',Date:'তারিখ',Time:'সময়',Select:'তালিকা থেকে একট (Select)',MultiSelect:'একাধিক নির্বাচন',Checkbox:'চেকবক্স',Toggle:'চালু/বন্ধ (Toggle)',Image:'একটি ছবি',MultipleImages:'একাধিক ছবি',File:'ফাইল লিংক',Location:'অবস্থান',GoogleMapsURL:'Google Maps লিংক'};
