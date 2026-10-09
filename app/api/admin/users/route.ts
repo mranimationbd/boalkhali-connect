@@ -1,5 +1,5 @@
 export const dynamic='force-dynamic';
-import {NextResponse} from 'next/server'; import {mutateDBAsync,audit} from '@/lib/db'; import {requireRole} from '@/lib/auth';
+import {NextResponse} from 'next/server'; import {mutateDBAsync,audit,now} from '@/lib/db'; import {requireRole,hashPw} from '@/lib/auth';
 const ASSIGNABLE=['CITIZEN','BUSINESS','SERVICE_PROVIDER','MODERATOR','ADMIN','SUPER_ADMIN'];
 const OWNER_EMAIL='habiburrahman962540@gmail.com';
 export async function POST(req:Request){ const r=await requireRole(['ADMIN','SUPER_ADMIN']); if((r as any).error) return NextResponse.json(r,{status:(r as any).status}); const actor=(r as any).user; const b=await req.json(); const out:any=await mutateDBAsync((db:any)=>{ const u=db.users.find((x:any)=>x.id===String(b.id||'')); if(!u) return {e:404,error:'USER_NOT_FOUND'};
@@ -13,6 +13,8 @@ export async function POST(req:Request){ const r=await requireRole(['ADMIN','SUP
  else if(b.action==='unverify'){ u.verified=false; audit(db,actor.email,'USER_UNVERIFY',u.id); }
  else if(b.action==='block'){ u.blocked=true; db.sessions=db.sessions.filter((s:any)=>s.userId!==u.id); audit(db,actor.email,'USER_BLOCK',u.id,{email:u.email}); }
  else if(b.action==='unblock'){ u.blocked=false; audit(db,actor.email,'USER_UNBLOCK',u.id,{email:u.email}); }
+ else if(b.action==='reset_password'){ // A-06: admin-assisted reset for DB-password accounts (the /forgot flow's other half)
+ const pw=String(b.password||''); if(pw.length<6) return {e:400,error:'PASSWORD_SHORT'}; if(targetSuper&&actor.role!=='SUPER_ADMIN') return {e:403,error:'CANNOT_MODIFY_SUPER_ADMIN'}; u.passwordHash=hashPw(pw); u.passwordChangedAt=now(); db.sessions=db.sessions.filter((s:any)=>s.userId!==u.id); let resolved=0; for(const r of db.reset_requests){ if(r.userId===u.id&&r.status==='PENDING'){ r.status='DONE'; r.resolvedAt=now(); r.resolvedBy=actor.email; resolved++; } } audit(db,actor.email,'PASSWORD_RESET_ADMIN',u.id,{email:u.email,requestsResolved:resolved}); }
  else if(b.action==='delete'){ const email=u.email; db.users=db.users.filter((x:any)=>x.id!==u.id); db.sessions=db.sessions.filter((s:any)=>s.userId!==u.id); audit(db,actor.email,'USER_DELETE',u.id,{email}); }
  else return {e:400,error:'INVALID_ACTION'};
  return {ok:true,id:u.id,role:u.role,verified:!!u.verified,blocked:!!u.blocked}; });

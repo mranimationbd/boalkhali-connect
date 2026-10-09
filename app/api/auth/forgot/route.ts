@@ -1,0 +1,8 @@
+export const dynamic='force-dynamic';
+import {NextResponse} from 'next/server'; import {readDBAsync,mutateDBAsync,id,now,sanitize} from '@/lib/db'; import {rateLimit,clientIp} from '@/lib/auth';
+// Honest password recovery (A-06). Two account kinds exist: Firebase-backed (firebaseUid —
+// Firebase really sends a reset mail) and DB-password accounts (scrypt hash in our DB — a
+// Firebase mail can never change it; the old UI claimed otherwise and locked users out
+// forever). DB accounts create an admin reset REQUEST; an admin sets a new password from
+// /admin/users (audit-logged). No false 'পাঠানো হয়েছে' is ever printed.
+export async function POST(req:Request){ if(!rateLimit('forgot:'+clientIp(req),10)) return NextResponse.json({error:'RATE_LIMIT'},{status:429}); const b=await req.json().catch(()=>null); if(!b) return NextResponse.json({error:'INVALID_JSON'},{status:400}); const ident=sanitize(b.email||b.phone||b.identifier||'').toLowerCase(); const phoneId=ident.replace(/[\s-]/g,''); if(!ident) return NextResponse.json({error:'IDENTIFIER_REQUIRED'},{status:400}); const db=await readDBAsync(); const u=db.users.find((x:any)=>String(x.email||'').toLowerCase()===ident||(x.phone&&String(x.phone).replace(/[\s-]/g,'')===phoneId)); if(!u) return NextResponse.json({mode:'none'}); if(u.firebaseUid) return NextResponse.json({mode:'firebase',email:u.email}); const out:any=await mutateDBAsync((d:any)=>{ const ex=d.reset_requests.find((r:any)=>r.userId===u.id&&r.status==='PENDING'); if(ex) return {already:true}; const r={id:id('rr'),userId:u.id,contact:ident,status:'PENDING',createdAt:now()}; d.reset_requests.unshift(r); return {id:r.id}; }); return NextResponse.json({mode:'admin',already:!!out.already}); }
