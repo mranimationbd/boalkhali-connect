@@ -7,6 +7,7 @@
 //     (বাসা -> house posts, বাইক -> মোটরসাইকেল/market, ডাক্তার -> doctor category + directory).
 //  4) blood groups match case-insensitively in any script (b+ , B+ , বি+ -> B+ donor).
 import {CATEGORIES} from './db';
+import {isExpired} from './expiry';
 const BN_DIGITS='০১২৩৪৫৬৭৮৯';
 export function bnNorm(s:any){ return String(s||'').toLowerCase().replace(/[০-৯]/g,d=>String(BN_DIGITS.indexOf(d))).replace(/য়/g,'য').replace(/ড়/g,'র').replace(/়/g,'').replace(/[\-_]+/g,' ').replace(/\s+/g,' ').trim(); }
 export function bnSkel(s:any){ return bnNorm(s).replace(/[া-ৌঁ-ঃ্]/g,''); }
@@ -19,13 +20,13 @@ function groupOf(tokens:string[]):string{ for(const t of tokens){ const u=t.toUp
 export function searchAll(db:any,qRaw:string,f:{category?:string,area?:string,minPrice?:number,maxPrice?:number,sort?:string}={}){ const q=bnNorm(qRaw); const tokens=q?q.split(' '):[]; const synSlugs=new Set<string>(); const synTerms:string[]=[]; let wantDoctor=false, wantBlood=false, wantJobs=false; for(const t of tokens){ const s=SYNN[t]; if(s){ (s.slugs||[]).forEach(x=>synSlugs.add(x)); (s.terms||[]).forEach(x=>synTerms.push(bnNorm(x))); if(s.doctor) wantDoctor=true; if(s.blood) wantBlood=true; if(s.jobs) wantJobs=true; } }
  const catName:any={}; for(const c of CATEGORIES) catName[c.slug]=c.name; for(const c of (db.categories||[])) if(c&&c.slug) catName[c.slug]=c.name||catName[c.slug];
  const matchField=(useSyn:boolean,...fields:any[])=>{ const h=fields.map(x=>String(x||'')).join(' '); const hn=bnNorm(h); const hs=bnSkel(h); if(_hits(hn,hs,tokens)) return true; return useSyn&&synTerms.some(t=>{ const sk=bnSkel(t); return hn.includes(t)||(sk.length>=3&&hs.includes(sk)); }); };
- let posts=(db.posts||[]).filter((p:any)=>p.status==='APPROVED'&&(!f.category||p.categorySlug===f.category)&&(!f.area||String(p.location||'').includes(f.area))&&(!f.minPrice||Number(p.price||0)>=f.minPrice)&&(!f.maxPrice||Number(p.price||0)<=f.maxPrice));
+ let posts=(db.posts||[]).filter((p:any)=>p.status==='APPROVED'&&!isExpired(p)&&(!f.category||p.categorySlug===f.category)&&(!f.area||String(p.location||'').includes(f.area))&&(!f.minPrice||Number(p.price||0)>=f.minPrice)&&(!f.maxPrice||Number(p.price||0)<=f.maxPrice));
  if(q){ const scored=posts.map((p:any)=>({p,direct:matchField(true,p.title,p.desc,p.location,p.landmark,p.subcategory,catName[p.categorySlug],p.categorySlug),viaCat:synSlugs.has(p.categorySlug)})).filter((x:any)=>x.direct||x.viaCat); posts=scored.sort((a:any,b:any)=>(Number(b.direct)-Number(a.direct))||String(b.p.createdAt||'').localeCompare(String(a.p.createdAt||''))).map((x:any)=>x.p); }
  if(f.sort==='price_asc') posts=[...posts].sort((a:any,b:any)=>Number(a.price||0)-Number(b.price||0)); else if(f.sort==='price_desc') posts=[...posts].sort((a:any,b:any)=>Number(b.price||0)-Number(a.price||0)); else if(!q) posts=[...posts].sort((a:any,b:any)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
  const g=groupOf(tokens);
  const donors=q?(db.blood_donors||[]).filter((d:any)=>{ if(g) return String(d.bloodGroup||'').toUpperCase()===g; if(wantBlood) return true; return matchField(false,d.name,d.bloodGroup,d.location,d.area); }):[];
  const doctors=q?(db.doctors||[]).filter((d:any)=>wantDoctor||matchField(false,d.name,d.specialty,d.chamber,d.address)):[];
- const jobs=q?(wantJobs?(db.jobs||[]):(db.jobs||[]).filter((j:any)=>matchField(false,j.title,j.company,j.location,j.desc))):[]; const restaurants=q?(db.restaurants||[]).filter((r:any)=>matchField(false,r.name,r.category,r.location,r.menu)):[];
+ const liveJobs=(db.jobs||[]).filter((j:any)=>!isExpired(j)); const jobs=q?(wantJobs?liveJobs:liveJobs.filter((j:any)=>matchField(false,j.title,j.company,j.location,j.desc))):[]; const restaurants=q?(db.restaurants||[]).filter((r:any)=>matchField(false,r.name,r.category,r.location,r.menu)):[];
  // CMS contents: ONLY published items of enabled, public types — drafts/pending/archived/
  // trashed are hard-excluded from public search exactly as they 404 on public routes.
  const pubTypes=new Set((db.content_types||[]).filter((t:any)=>t&&t.enabled!==false&&t.publicListing).map((t:any)=>t.slug)); const typeName:any={}; (db.content_types||[]).forEach((t:any)=>{ typeName[t.slug]=t.nameBn||t.nameEn||t.slug; });
