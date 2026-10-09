@@ -5,7 +5,11 @@ export const UPLOAD_DIR=process.env.UPLOAD_DIR||(ON_VERCEL?'/tmp/boalkhali-uploa
 export const UPLOAD_QUOTA_BYTES=Math.floor((Number(process.env.UPLOAD_QUOTA_GB)||5)*1024*1024*1024); // posting uploads quota: 5 GB (user, 2026-10-08)
 // ---- DB backend selection (2026-10-08): Firestore when all 3 service-account env vars are set, else local file ----
 export const DB_BACKEND:'firestore'|'file'=(process.env.FIREBASE_PROJECT_ID&&process.env.FIREBASE_CLIENT_EMAIL&&process.env.FIREBASE_PRIVATE_KEY)?'firestore':'file';
-let _fsDb:any=null; let _fsInit:Promise<any>|null=null; let _fsCache:{db:any,at:number,v:number}|null=null; const FS_TTL_MS=3000;
+let _fsDb:any=null; let _fsInit:Promise<any>|null=null; let _fsCache:{db:any,at:number,v:number}|null=null; const FS_TTL_MS=30000; let _fsInflight:Promise<{db:any,v:number}>|null=null;
+// Perf hotfix (2026-10-09, post-deploy): the 3s TTL + a full 13-collection re-scan on
+// every cache miss saturated Firestore (Spark) once per-page-view writers appeared.
+// TTL is 30s now, concurrent misses share ONE in-flight fetch, and a successful
+// mutation primes the cache with the state it just committed instead of voiding it.
 // ---- Concurrency core v2 (2026-10-09 batch, A-01/M-01) ----
 // DIAGNOSIS (proven with a fake-Firestore harness that replicates the SDK re-invoking a
 // transaction callback on contention — 12 acked concurrent post-creates, 4 survived, exactly
@@ -83,7 +87,7 @@ async function _persistMerged(base:any,mine:any):Promise<any>{
  const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main');
  for(let i=0;i<10;i++){ const s=await ref.get(); const curV=s.exists?Number((s.data()||{}).v)||0:0; let cur:any; if(s.exists){ try{ cur=normalizeDB(JSON.parse((s.data()||{}).json||'')); }catch{ cur={}; } } else cur=normalizeDB(seedDB()); const curFull=await _overlayHot(cur); const b=base||curFull; const merged=base?_merge3(b,mine,curFull):_cleanRec(mine); const diff=_hotDiff(b,merged); const w=await _writeLegacyFs(b,merged,curV);
   if(w!==true&&w!=='skip'){ await new Promise(r=>setTimeout(r,20*(i+1)+Math.floor(Math.random()*15))); continue; }
-  await _hotApplyFs(diff.puts,diff.dels); _fsCache=null; return merged; }
+  await _hotApplyFs(diff.puts,diff.dels); try{ _fsCache={db:JSON.parse(JSON.stringify(merged)),at:Date.now(),v:w===true?curV+1:curV}; }catch{ _fsCache=null; } return merged; }
  throw new Error('DB_WRITE_CONTENTION: write failed after 10 retries'); }
 export async function mutateDBAsync<T>(fn:(db:any)=>T|Promise<T>):Promise<T>{
  if(DB_BACKEND==='file'){ return _withFileLock(async()=>{ const curFile=normalizeDB(readFileDB()); const db:any=await _overlayHot(JSON.parse(JSON.stringify(curFile))); const base=JSON.parse(JSON.stringify(db)); const out=await fn(db); const diff=_hotDiff(base,db); await _applyHotDiff(diff); const legacyFile:any={...curFile}; const ml=_legacyOf(db); for(const k of Object.keys(ml)) legacyFile[k]=ml[k]; writeFileDB(legacyFile); return out; }); }
@@ -93,8 +97,30 @@ export async function mutateDBAsync<T>(fn:(db:any)=>T|Promise<T>):Promise<T>{
  for(let i=0;i<10;i++){ const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); const snap=await ref.get(); let db:any; let v=0; if(!snap.exists){ db=normalizeDB(seedDB()); } else { v=Number((snap.data()||{}).v)||0; try{ db=normalizeDB(JSON.parse((snap.data()||{}).json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } }
   const full:any=await _overlayHot(db); const base=JSON.parse(JSON.stringify(full)); const out=await fn(full); const diff=_hotDiff(base,full); const w=await _writeLegacyFs(base,full,v);
   if(w!==true&&w!=='skip'){ await new Promise(r=>setTimeout(r,20*(i+1)+Math.floor(Math.random()*15))); continue; }
-  await _hotApplyFs(diff.puts,diff.dels); _fsCache=null; return out; }
+  await _hotApplyFs(diff.puts,diff.dels); try{ _fsCache={db:JSON.parse(JSON.stringify(full)),at:Date.now(),v:w===true?v+1:v}; }catch{ _fsCache=null; } return out; }
  throw new Error('DB_WRITE_CONTENTION: mutation failed after 10 retries'); }
+// ---- Fast-path single-record writes (2026-10-09 perf hotfix) ----
+// mutateDBAsync assembles the WHOLE state (legacy doc + 13 full-collection scans) per
+// call; the per-page-view writers (view counters, search logs) multiplied that into
+// Firestore saturation. These helpers touch exactly ONE per-record document instead,
+// preserving the old writers' stored shapes, caps and ordering.
+function _hotGetFile(name:string,rid:string):any{ try{ const p=path.join(_hotRoot(),name,_fname(rid)+'.json'); if(fs.existsSync(p)) return JSON.parse(fs.readFileSync(p,'utf8')); }catch{} const l=_hotListFile(name); return l.find((r:any)=>_recId(r)===rid)||null; }
+const _APPEND_CAPS:Record<string,number>={search_logs:2000}; // mirrors SEARCH_LOG_CAP (lib/searchLog.ts)
+export async function incrementHotViews(name:'posts'|'contents',rid:string):Promise<number|null>{
+ if(!_HOTSET.has(name)||!rid) return null;
+ if(DB_BACKEND==='file'){ return _withFileLock(async()=>{ const rec=_hotGetFile(name,rid); if(!rec) return null; rec.views=(Number(rec.views)||0)+1; _hotPutFile(name,rec); return rec.views; }); }
+ const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_'+name).doc(rid); const admin=await firebaseAdmin();
+ try{ await ref.update({views:admin.firestore.FieldValue.increment(1)}); }catch(e:any){ const s0=await ref.get(); if(!s0.exists) return null; throw e; }
+ const s=await ref.get(); if(!s.exists) return null; const views=Number((s.data()||{}).views)||0;
+ if(_fsCache&&Array.isArray(_fsCache.db[name])){ const r=_fsCache.db[name].find((x:any)=>x&&String(x.id)===rid); if(r) r.views=views; }
+ return views; }
+export async function appendHotRecord(name:string,rec:any):Promise<boolean>{
+ if(!_HOTSET.has(name)||!rec||!_recId(rec)) return false; const cap=_APPEND_CAPS[name]||0;
+ if(DB_BACKEND==='file'){ return _withFileLock(async()=>{ _hotPutFile(name,_cleanRec(rec)); if(cap>0){ const list=_hotListFile(name); if(list.length>cap){ const ex=Math.min(list.length-cap,100); for(const old of list.slice(list.length-ex)) _hotDelFile(name,_recId(old) as string); } } return true; }); }
+ const fsdb=await firestoreDB(); const col=fsdb.collection('bk_'+name); await col.doc(_recId(rec) as string).set(_cleanRec(rec));
+ if(_fsCache&&Array.isArray(_fsCache.db[name])){ const arr=_fsCache.db[name]; if(!arr.some((x:any)=>x&&String(x.id)===String(rec.id))) arr.unshift(_cleanRec(rec)); if(cap>0&&arr.length>cap) arr.length=cap; }
+ if(cap>0){ try{ const cnt=await col.count().get(); const n=Number(cnt.data().count)||0; if(n>cap){ const ex=Math.min(n-cap,100); const old=await col.orderBy('createdAt','asc').limit(ex).get(); if(!old.empty){ const b=fsdb.batch(); old.forEach((d:any)=>b.delete(d.ref)); await b.commit(); } } }catch{} }
+ return true; }
 async function firebaseAdmin():Promise<any>{ try{ const mod:any=await import('firebase-admin'); const admin=mod.default||mod; if(!admin.apps.length){ admin.initializeApp({credential:admin.credential.cert({projectId:process.env.FIREBASE_PROJECT_ID as string,clientEmail:process.env.FIREBASE_CLIENT_EMAIL as string,privateKey:(process.env.FIREBASE_PRIVATE_KEY as string).replace(/\\n/g,'\n')})}); } return admin; }catch(e:any){ throw new Error('FIRESTORE_INIT_FAILED: '+(e?.message||e)); } }
 export async function getFirebaseAdmin():Promise<any>{ if(DB_BACKEND!=='firestore') throw new Error('FIREBASE_NOT_CONFIGURED'); return firebaseAdmin(); }
 async function firestoreDB():Promise<any>{ if(_fsDb) return _fsDb; if(_fsInit) return _fsInit; _fsInit=(async()=>{ const admin=await firebaseAdmin(); _fsDb=admin.firestore(); return _fsDb; })(); return _fsInit; }
@@ -149,7 +175,11 @@ export function normalizeDB(d:any):any{ if(!d||typeof d!=='object'||Array.isArra
  return d; }
 function readFileDB():any{ try{ if(!fs.existsSync(DB_PATH)){const d=seedDB(); writeFileDB(d); return d;} return normalizeDB(JSON.parse(fs.readFileSync(DB_PATH,'utf8')));}catch{ const d=seedDB(); writeFileDB(d); return d;}}
 function writeFileDB(d:any){ fs.mkdirSync(path.dirname(DB_PATH),{recursive:true}); const t=DB_PATH+'.tmp'; fs.writeFileSync(t,JSON.stringify(d,null,2)); fs.renameSync(t,DB_PATH);}
-export async function readDBAsync():Promise<any>{ if(DB_BACKEND==='file'){ const db=normalizeDB(readFileDB()); await _overlayHot(db); return _stamp(db,0); } if(_fsCache&&Date.now()-_fsCache.at<FS_TTL_MS) return _stamp(JSON.parse(JSON.stringify(_fsCache.db)),_fsCache.v); const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); let snap:any; try{ snap=await ref.get(); }catch(e:any){ throw new Error('FIRESTORE_READ_FAILED: '+(e?.message||e)); } if(!snap.exists){ const d=normalizeDB(seedDB()); await _overlayHot(d); await writeDBAsync(d); return _stamp(JSON.parse(JSON.stringify(d)),1); } let db:any; const v=Number((snap.data()||{}).v)||0; try{ db=normalizeDB(JSON.parse((snap.data()||{}).json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } await _overlayHot(db); _fsCache={db,at:Date.now(),v}; return _stamp(JSON.parse(JSON.stringify(db)),v); }
+async function _fsFetchState():Promise<{db:any,v:number}>{ const fsdb=await firestoreDB(); const ref=fsdb.collection('bk_state').doc('main'); let snap:any; try{ snap=await ref.get(); }catch(e:any){ throw new Error('FIRESTORE_READ_FAILED: '+(e?.message||e)); } if(!snap.exists){ const d=normalizeDB(seedDB()); await _overlayHot(d); await writeDBAsync(d); return {db:d,v:1}; } const v=Number((snap.data()||{}).v)||0; let db:any; try{ db=normalizeDB(JSON.parse((snap.data()||{}).json||'')); }catch{ throw new Error('FIRESTORE_STATE_CORRUPT: bk_state/main json field is not valid JSON'); } await _overlayHot(db); return {db,v}; }
+export async function readDBAsync():Promise<any>{ if(DB_BACKEND==='file'){ const db=normalizeDB(readFileDB()); await _overlayHot(db); return _stamp(db,0); } if(_fsCache&&Date.now()-_fsCache.at<FS_TTL_MS) return _stamp(JSON.parse(JSON.stringify(_fsCache.db)),_fsCache.v);
+ // In-flight dedupe: concurrent cache misses share ONE fetch instead of each fanning
+ // out into 13 full-collection scans; the shared promise clears when it settles.
+ if(!_fsInflight){ _fsInflight=_fsFetchState().then((r)=>{ _fsCache={db:r.db,at:Date.now(),v:r.v}; return r; }).finally(()=>{ _fsInflight=null; }); } const r=await _fsInflight; return _stamp(JSON.parse(JSON.stringify(r.db)),r.v); }
 export async function writeDBAsync(d:any):Promise<void>{ const st=_dbBase.get(d); if(!st){ if(DB_BACKEND==='file') await _persistMerged(null,d); else await _persistMerged(null,d); return; } const base=JSON.parse(st.snap); await _persistMerged(base,d); }
 export function audit(db:any,actor:string,action:string,target:string,meta:any={}){ db.audit_logs.unshift({id:id('log'),actor,action,target,metadata:meta,createdAt:now()}); }
 export function sanitize(s:any){ return String(s||'').replace(/<[^>]*>/g,'').trim().slice(0,5000); }

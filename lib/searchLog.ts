@@ -1,4 +1,4 @@
-import {id,now,mutateDBAsync,sanitizeSearchLog} from './db'; import {bnNorm} from './search'; import {dhakaDay} from './analytics';
+import {id,now,appendHotRecord,sanitizeSearchLog} from './db'; import {bnNorm} from './search'; import {dhakaDay} from './analytics';
 // ---- Privacy-safe search analytics (Wave 2, 2026-10-09) ----
 // Every non-empty search appends ONE small record to the per-record hot collection
 // bk_search_logs: {id, term (Bengali-normalized), resultCount, day (Asia/Dhaka), createdAt}.
@@ -6,10 +6,10 @@ import {id,now,mutateDBAsync,sanitizeSearchLog} from './db'; import {bnNorm} fro
 // built on top can only ever answer "what do people look for / not find", never "who".
 // Volume control: empty terms are skipped, bot user-agents are skipped by the callers
 // (isBotUA), and the collection is hard-capped at SEARCH_LOG_CAP newest records — the
-// trim happens inside the same mutateDBAsync write, so the per-record diff deletes the
-// overflow documents (same bounded-retention pattern as purgeOldIpLogs).
+// trim is opportunistic inside appendHotRecord (single-doc write; overflow deleted in
+// bounded batches — same bounded-retention pattern as purgeOldIpLogs).
 export const SEARCH_LOG_CAP=2000;
-export async function logSearch(rawTerm:any,resultCount:any):Promise<boolean>{ const term=bnNorm(rawTerm).slice(0,120); if(!term) return false; const rec=sanitizeSearchLog({id:id('sl'),term,resultCount,day:dhakaDay(),createdAt:now()}); if(!rec) return false; try{ await mutateDBAsync((db:any)=>{ if(!Array.isArray(db.search_logs)) db.search_logs=[]; db.search_logs.unshift(rec); if(db.search_logs.length>SEARCH_LOG_CAP) db.search_logs.length=SEARCH_LOG_CAP; }); return true; }catch{ return false; } }
+export async function logSearch(rawTerm:any,resultCount:any):Promise<boolean>{ const term=bnNorm(rawTerm).slice(0,120); if(!term) return false; const rec=sanitizeSearchLog({id:id('sl'),term,resultCount,day:dhakaDay(),createdAt:now()}); if(!rec) return false; try{ await appendHotRecord('search_logs',rec); return true; }catch{ return false; } }
 export type TermStat={term:string,count:number,zeroCount:number,lastDay:string,lastAt:string};
 // Aggregate raw log rows (any source shape coerced through sanitizeSearchLog) over the
 // last `days` Dhaka days. topTerms = most searched; zeroTerms = terms whose searches kept
