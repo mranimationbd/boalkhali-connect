@@ -1,4 +1,4 @@
-import Link from 'next/link'; import {MapPin,BadgeCheck} from 'lucide-react'; import {Header} from './Header'; import {BottomNav} from './BottomNav'; import {VisitTracker} from './VisitTracker'; import {VisitorCounter} from './VisitorCounter'; import {catIcon,catEmoji} from '@/lib/catIcons'; import {LOGO_DATA} from '@/lib/logoData';
+import Link from 'next/link'; import {MapPin,BadgeCheck} from 'lucide-react'; import {Header} from './Header'; import {BottomNav} from './BottomNav'; import {VisitTracker} from './VisitTracker'; import {VisitorCounter} from './VisitorCounter'; import {catIcon,catEmoji} from '@/lib/catIcons'; 
 export {BottomNav};
 export const bn=(n:any)=>String(n??'').replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[+d]);
 export function CatIcon({name,color}:{name:string,color:string}){return <div style={{background:color+'18',color}} className="w-14 h-14 rounded-full grid place-items-center text-2xl font-bold">{name.slice(0,1)}</div>}
