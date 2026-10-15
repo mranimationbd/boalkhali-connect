@@ -26,7 +26,10 @@ export default async function Home(){ const db=await readDBAsync(); const u=awai
       <Link href="/boalkhali#itihas" className="chip border border-white/30 bg-white/10 text-white transition hover:bg-white/20">📜 ইতিহাস ও বিশিষ্ট ব্যক্তিত্ব</Link>
      </div>
     </div>
-    <Link href="/boalkhali" className="btn shrink-0 !bg-white !text-emerald-800">বোয়ালখালীকে জানুন →</Link>
+    <div className="flex shrink-0 flex-col gap-2">
+     <Link href="/boalkhali" className="btn !bg-white !text-emerald-800">বোয়ালখালীকে জানুন →</Link>
+     <Link href="/unseen-boalkhali" className="btn border border-white/40 !bg-white/15 !text-white backdrop-blur">🗺️ আনসিন বোয়ালখালী</Link>
+    </div>
    </div>
    <form action="/search" className="mt-5 flex max-w-2xl items-center rounded-full bg-white p-1.5 shadow-elev-2">
     <Search className="ml-3 shrink-0 text-emerald-700"/>

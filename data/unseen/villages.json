@@ -1,0 +1,378 @@
+{
+ "villages": [
+  {
+   "name": "পশ্চিম কধুরখীল",
+   "nameEn": "Paschim Kadhurkhil",
+   "union": "কধুরখীল",
+   "lon": 91.905,
+   "lat": 22.408,
+   "note": ""
+  },
+  {
+   "name": "মধ্যম কধুরখীল",
+   "nameEn": "Madhyam Kadhurkhil",
+   "union": "কধুরখীল",
+   "lon": 91.928,
+   "lat": 22.406,
+   "note": "কধুরখীল মৃৎভবন (বাংলাদেশের বৃহত্তম মাটির ভবন) এখানে"
+  },
+  {
+   "name": "পূর্ব কধুরখীল",
+   "nameEn": "Purba Kadhurkhil",
+   "union": "কধুরখীল",
+   "lon": 91.945,
+   "lat": 22.402,
+   "note": ""
+  },
+  {
+   "name": "পশ্চিম গোমদণ্ডী",
+   "nameEn": "Paschim Gomdandi",
+   "union": "পশ্চিম গোমদণ্ডী",
+   "lon": 91.92727,
+   "lat": 22.41138,
+   "note": "উপজেলা সদর এলাকা"
+  },
+  {
+   "name": "চর খিদিরপুর",
+   "nameEn": "Char Khidirpur",
+   "union": "পশ্চিম গোমদণ্ডী",
+   "lon": 91.91282,
+   "lat": 22.40628,
+   "note": "কর্ণফুলীর চর এলাকা"
+  },
+  {
+   "name": "চর খিজিরপুর",
+   "nameEn": "Char Khizirpur",
+   "union": "পশ্চিম গোমদণ্ডী",
+   "lon": 91.91622,
+   "lat": 22.40798,
+   "note": "কর্ণফুলীর চর এলাকা"
+  },
+  {
+   "name": "পশ্চিম শাকপুরা",
+   "nameEn": "Paschim Shakpura",
+   "union": "শাকপুরা",
+   "lon": 91.928,
+   "lat": 22.397,
+   "note": ""
+  },
+  {
+   "name": "মধ্যম শাকপুরা",
+   "nameEn": "Madhyam Shakpura",
+   "union": "শাকপুরা",
+   "lon": 91.94,
+   "lat": 22.395,
+   "note": ""
+  },
+  {
+   "name": "পূর্ব শাকপুরা",
+   "nameEn": "Purba Shakpura",
+   "union": "শাকপুরা",
+   "lon": 91.952,
+   "lat": 22.393,
+   "note": ""
+  },
+  {
+   "name": "ঘোষখীল",
+   "nameEn": "Ghoshkhil",
+   "union": "শাকপুরা",
+   "lon": 91.935,
+   "lat": 22.39,
+   "note": ""
+  },
+  {
+   "name": "পূর্ব সারোয়াতলী",
+   "nameEn": "Purba Saroatali",
+   "union": "সারোয়াতলী",
+   "lon": 91.95,
+   "lat": 22.378,
+   "note": ""
+  },
+  {
+   "name": "পশ্চিম সারোয়াতলী",
+   "nameEn": "Paschim Saroatali",
+   "union": "সারোয়াতলী",
+   "lon": 91.93,
+   "lat": 22.378,
+   "note": ""
+  },
+  {
+   "name": "বেঙ্গুরা",
+   "nameEn": "Bengura",
+   "union": "সারোয়াতলী",
+   "lon": 91.94,
+   "lat": 22.372,
+   "note": "বেঙ্গুরা রেলস্টেশন; আহলা দরবার শরীফ কাছাকাছি"
+  },
+  {
+   "name": "হোরারবাগ",
+   "nameEn": "Horarbag",
+   "union": "সারোয়াতলী",
+   "lon": 91.945,
+   "lat": 22.368,
+   "note": ""
+  },
+  {
+   "name": "পূর্ব খিতাপচর",
+   "nameEn": "Purba Khitapchar",
+   "union": "সারোয়াতলী",
+   "lon": 91.955,
+   "lat": 22.375,
+   "note": ""
+  },
+  {
+   "name": "পশ্চিম খিতাপচর",
+   "nameEn": "Paschim Khitapchar",
+   "union": "সারোয়াতলী",
+   "lon": 91.935,
+   "lat": 22.382,
+   "note": ""
+  },
+  {
+   "name": "ইমামুল্লারচর",
+   "nameEn": "Imamullarchar",
+   "union": "সারোয়াতলী",
+   "lon": 91.925,
+   "lat": 22.37,
+   "note": ""
+  },
+  {
+   "name": "দক্ষিণ সারোয়াতলী",
+   "nameEn": "Dakshin Saroatali",
+   "union": "সারোয়াতলী",
+   "lon": 91.94,
+   "lat": 22.365,
+   "note": ""
+  },
+  {
+   "name": "উত্তর সারোয়াতলী",
+   "nameEn": "Uttar Saroatali",
+   "union": "সারোয়াতলী",
+   "lon": 91.942,
+   "lat": 22.385,
+   "note": ""
+  },
+  {
+   "name": "পোপাদিয়া",
+   "nameEn": "Popadia",
+   "union": "পোপাদিয়া",
+   "lon": 91.935,
+   "lat": 22.358,
+   "note": "কালাচাঁন ঠাকুর বাড়ি ও মেলা"
+  },
+  {
+   "name": "সৈয়দপুর",
+   "nameEn": "Saidpur",
+   "union": "পোপাদিয়া",
+   "lon": 91.945,
+   "lat": 22.355,
+   "note": "হযরত সৈয়দ মারুফ ও কুতুব (রহ.) মাজার"
+  },
+  {
+   "name": "আকুবদণ্ডী",
+   "nameEn": "Akubdandi",
+   "union": "পোপাদিয়া",
+   "lon": 91.925,
+   "lat": 22.355,
+   "note": ""
+  },
+  {
+   "name": "আকলিয়া",
+   "nameEn": "Aklia",
+   "union": "পোপাদিয়া",
+   "lon": 91.93,
+   "lat": 22.362,
+   "note": ""
+  },
+  {
+   "name": "বিদগ্রাম",
+   "nameEn": "Bidgram",
+   "union": "পোপাদিয়া",
+   "lon": 91.95,
+   "lat": 22.36,
+   "note": ""
+  },
+  {
+   "name": "চরণদ্বীপ",
+   "nameEn": "Charandwip",
+   "union": "চরণদ্বীপ",
+   "lon": 91.905,
+   "lat": 22.348,
+   "note": "খেলারঘাট বাজার কাছাকাছি"
+  },
+  {
+   "name": "সৈয়দনগর",
+   "nameEn": "Saidnagar",
+   "union": "চরণদ্বীপ",
+   "lon": 91.915,
+   "lat": 22.345,
+   "note": ""
+  },
+  {
+   "name": "খরণদ্বীপ",
+   "nameEn": "Kharandwip",
+   "union": "শ্রীপুর খরণদ্বীপ",
+   "lon": 91.96977,
+   "lat": 22.40883,
+   "note": ""
+  },
+  {
+   "name": "শ্রীপুর",
+   "nameEn": "Sripur",
+   "union": "শ্রীপুর খরণদ্বীপ",
+   "lon": 91.97021,
+   "lat": 22.4072,
+   "note": "শ্রীপুর বুড়া মসজিদ"
+  },
+  {
+   "name": "জ্যৈষ্ঠপুরা",
+   "nameEn": "Jaisthapura",
+   "union": "শ্রীপুর খরণদ্বীপ",
+   "lon": 91.99,
+   "lat": 22.41,
+   "note": "জ্যৈষ্ঠপুরা পাহাড়ি বনাঞ্চল"
+  },
+  {
+   "name": "লট ৬৭ বি জ্যৈষ্ঠপুরা",
+   "nameEn": "Lot 67B Jaisthapura",
+   "union": "শ্রীপুর খরণদ্বীপ",
+   "lon": 91.995,
+   "lat": 22.405,
+   "note": "বন বিভাগের লট এলাকা"
+  },
+  {
+   "name": "আমুচিয়া",
+   "nameEn": "Amuchia",
+   "union": "আমুচিয়া",
+   "lon": 91.975,
+   "lat": 22.375,
+   "note": ""
+  },
+  {
+   "name": "কানুনগোপাড়া",
+   "nameEn": "Kanungopara",
+   "union": "আমুচিয়া",
+   "lon": 91.982,
+   "lat": 22.385,
+   "note": "স্যার আশুতোষ সরকারি কলেজ (১৯৩৯)"
+  },
+  {
+   "name": "ধোরলা",
+   "nameEn": "Dhorla",
+   "union": "আমুচিয়া",
+   "lon": 91.97,
+   "lat": 22.368,
+   "note": ""
+  },
+  {
+   "name": "খরঞ্জাপাড়া",
+   "nameEn": "Kharanjapara",
+   "union": "আমুচিয়া",
+   "lon": 91.985,
+   "lat": 22.372,
+   "note": ""
+  },
+  {
+   "name": "কানিবিল",
+   "nameEn": "Kanibil",
+   "union": "আমুচিয়া",
+   "lon": 91.978,
+   "lat": 22.362,
+   "note": ""
+  },
+  {
+   "name": "বহদ্দারপাড়া",
+   "nameEn": "Bahaddarpara",
+   "union": "আমুচিয়া",
+   "lon": 91.968,
+   "lat": 22.378,
+   "note": ""
+  },
+  {
+   "name": "মাস্টার বাজার",
+   "nameEn": "Master Bazar",
+   "union": "আমুচিয়া",
+   "lon": 91.98,
+   "lat": 22.38,
+   "note": "কানুনগোপাড়া মাস্টার বাজার"
+  },
+  {
+   "name": "কালাইয়ারহাট",
+   "nameEn": "Kalaiyarhat",
+   "union": "আমুচিয়া",
+   "lon": 91.972,
+   "lat": 22.385,
+   "note": "কালাইয়ার হাট"
+  },
+  {
+   "name": "বুড়ির পাড়",
+   "nameEn": "Burir Para",
+   "union": "আমুচিয়া",
+   "lon": 91.988,
+   "lat": 22.378,
+   "note": ""
+  },
+  {
+   "name": "করলডেঙ্গা",
+   "nameEn": "Karaldenga",
+   "union": "আহলা করলডেঙ্গা",
+   "lon": 91.985,
+   "lat": 22.405,
+   "note": "মেধস মুনি আশ্রমের পাহাড়ি এলাকা"
+  },
+  {
+   "name": "উত্তর ভূর্ষি",
+   "nameEn": "Uttar Bhursi",
+   "union": "আহলা করলডেঙ্গা",
+   "lon": 91.98082,
+   "lat": 22.40628,
+   "note": ""
+  },
+  {
+   "name": "আহলা সাধার পাড়া",
+   "nameEn": "Ahla Sadhar Para",
+   "union": "আহলা করলডেঙ্গা",
+   "lon": 91.992,
+   "lat": 22.398,
+   "note": ""
+  },
+  {
+   "name": "আহলা গাজীর পাড়া",
+   "nameEn": "Ahla Gazir Para",
+   "union": "আহলা করলডেঙ্গা",
+   "lon": 91.988,
+   "lat": 22.392,
+   "note": ""
+  },
+  {
+   "name": "আহলা শেখ চৌধুরী পাড়া",
+   "nameEn": "Ahla Sheikh Chowdhury Para",
+   "union": "আহলা করলডেঙ্গা",
+   "lon": 91.982,
+   "lat": 22.395,
+   "note": ""
+  },
+  {
+   "name": "আহলা বৈদ্যপাড়া",
+   "nameEn": "Ahla Baidyapara",
+   "union": "আহলা করলডেঙ্গা",
+   "lon": 91.995,
+   "lat": 22.402,
+   "note": ""
+  },
+  {
+   "name": "দক্ষিণ করলডেঙ্গা",
+   "nameEn": "Dakshin Karaldenga",
+   "union": "আহলা করলডেঙ্গা",
+   "lon": 91.983,
+   "lat": 22.398,
+   "note": "বু-আলী কালান্দর শাহ মাজার কাছাকাছি"
+  }
+ ],
+ "count": 46,
+ "sources": [
+  "bn.wikipedia.org union pages",
+  "boalkhali.chittagong.gov.bd (via citations)"
+ ],
+ "note": "Marker positions approximate"
+}
