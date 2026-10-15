@@ -16,8 +16,30 @@ const FEATURES = [
   {href:'/unseen-boalkhali/rotno', icon:'💎', title:'লুকানো রত্ন', desc:'ভ্রমণপিপাসুদের খুঁজে পাওয়া অজানা জায়গা, বিখ্যাত খাবার — আপনিও জমা দিতে পারেন।'},
 ];
 
+const BN_MONTHS = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+function seasonal(month: number): {title:string; desc:string}[] {
+  // month: 0-11
+  if (month>=10 || month<=1) return [ // শীত
+    {title:'🥾 করলডেঙ্গা পাহাড় ট্রেকিং', desc:'শীতের শুষ্ক আবহাওয়ায় পাহাড়ি পথে হাঁটার সেরা সময় — পরিষ্কার আকাশ, ঠান্ডা বাতাস।'},
+    {title:'🌅 কালুরঘাটে সূর্যাস্ত', desc:'কুয়াশামুক্ত বিকেলে সেতুর নিচে নদীর পাড়ে সূর্যাস্ত দেখুন।'},
+    {title:'🛕 মেধস আশ্রম দর্শন', desc:'শীতের সকালে পাহাড়চূড়ার তীর্থভূমি — ভিড় কম, পরিবেশ মনোরম।'},
+  ];
+  if (month>=5 && month<=8) return [ // বর্ষা
+    {title:'⛵ কর্ণফুলীতে নৌকা ভ্রমণ', desc:'বর্ষায় নদী পানিতে ভরপুর — কধুরখীল নৌঘাট থেকে সাম্পানে ঘোরা।'},
+    {title:'💧 সীতার ঝরনা', desc:'বর্ষায় পাহাড়ি ঝরনা পূর্ণ স্রোতে — করলডেঙ্গার সেরা দৃশ্য।'},
+    {title:'🌧️ সবুজ গ্রামবাংলা', desc:'বৃষ্টিভেজা ধানখেত আর খাল-বিল — গ্রামের পথে হাঁটুন (ছাতা নিয়ে)।'},
+  ];
+  return [ // শরৎ/বসন্ত
+    {title:'🏞️ লালার দীঘির পাড়', desc:'মেঘমুক্ত আকাশে দীঘির পাড়ে বিকেল কাটানোর উপযুক্ত সময়।'},
+    {title:'🕌 ঐতিহ্য ভ্রমণ', desc:'শ্রীপুর বুড়া মসজিদ, দেওয়ান ভিটা, শ্যামরায় মন্দির — ইতিহাসের খোঁজে।'},
+    {title:'🎪 হাট-বাজার ঘোরা', desc:'কালুরঘাট, কানুনগোপাড়া বাজারে স্থানীয় জীবনযাত্রা দেখুন।'},
+  ];
+}
+
 export default function UnseenBoalkhali(){
   const featured = PLACES.slice(0, 6);
+  const month = new Date().getMonth();
+  const picks = seasonal(month);
   return <Shell><main className="mx-auto max-w-6xl space-y-8 p-3 md:p-4">
     {/* HERO */}
     <section className="relative overflow-hidden rounded-[28px] text-white shadow-elev-2">
@@ -67,6 +89,19 @@ export default function UnseenBoalkhali(){
             <p className="mt-1 text-sm leading-relaxed text-gray-600">{f.desc}</p>
             <p className="mt-3 text-sm font-bold text-brand-700">খুলুন →</p>
           </Link>
+        ))}
+      </div>
+    </section>
+
+    {/* SEASONAL */}
+    <section>
+      <SectionTitle title={`🗓️ ${BN_MONTHS[month]} মাসে কোথায় ঘুরবেন`} sub="মৌসুম অনুযায়ী সেরা গন্তব্য"/>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        {picks.map(p=>(
+          <div key={p.title} className="card lift !p-4">
+            <p className="font-display font-bold leading-snug">{p.title}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-gray-600">{p.desc}</p>
+          </div>
         ))}
       </div>
     </section>

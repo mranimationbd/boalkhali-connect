@@ -75,6 +75,16 @@ export default function UnseenPlaces(){
       : <p className="card p-8 text-center text-gray-500">কিছু পাওয়া যায়নি — অন্য নামে খুঁজে দেখুন।</p>
     )}
 
+    {/* emergency */}
+    <div className="card !p-4 !border-red-200 !bg-red-50/60">
+      <p className="font-display font-bold">🚨 জরুরি নম্বর</p>
+      <div className="mt-2 flex flex-wrap gap-2 text-sm font-bold">
+        <a href="tel:999" className="chip bg-red-600 text-white">📞 ৯৯৯ — জাতীয় জরুরি সেবা</a>
+        <Link href="/emergency" className="chip bg-white border border-red-200 text-red-700">বোয়ালখালীর জরুরি সেবা →</Link>
+      </div>
+      <p className="mt-2 text-[11px] text-gray-500">ভ্রমণে কোনো বিপদে পড়লে ৯৯৯-এ কল করুন — পুলিশ, ফায়ার সার্ভিস ও অ্যাম্বুলেন্স এক নম্বরে।</p>
+    </div>
+
     {/* travel info */}
     <div className="card !p-4">
       <p className="font-display font-bold">💰 খরচ ও থাকার ধারণা</p>

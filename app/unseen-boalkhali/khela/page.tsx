@@ -119,6 +119,49 @@ function MapPuzzle({onDone}:{onDone:(s:number,t:number)=>void}){
   </div>;
 }
 
+/* ---------------- FARTHEST PLACE ---------------- */
+function haversineKm(a:{lat:number;lon:number}, b:{lat:number;lon:number}){
+  const R=6371, dLa=(b.lat-a.lat)*Math.PI/180, dLo=(b.lon-a.lon)*Math.PI/180;
+  const s=Math.sin(dLa/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function FarthestGame({onDone}:{onDone:(s:number,t:number)=>void}){
+  const [qs] = useState(()=>{
+    return Array.from({length:8}, ()=>{
+      const pin = PLACES[Math.floor(Math.random()*PLACES.length)];
+      const others = shuffle(PLACES.filter(p=>p.id!==pin.id)).slice(0,3);
+      const cands = [pin, ...others];
+      const dists = others.map(o=>({o, d: haversineKm(pin, o)}));
+      const far = dists.sort((a,b)=>b.d-a.d)[0].o;
+      const options = shuffle([far.name, ...others.filter(o=>o.id!==far.id).map(o=>o.name)]);
+      return {pin, options, answer: options.indexOf(far.name), dist: Math.round(dists[0].d*10)/10};
+    });
+  });
+  const [idx,setIdx]=useState(0); const [picked,setPicked]=useState<number|null>(null); const [score,setScore]=useState(0);
+  const q=qs[idx];
+  const choose=(i:number)=>{ if(picked!==null)return; setPicked(i); if(i===q.answer)setScore(s=>s+1); };
+  const next=()=>{ if(idx+1>=qs.length) onDone(score+(picked===q.answer?1:0), qs.length); else {setIdx(idx+1); setPicked(null);} };
+  return <div className="card !p-5">
+    <div className="flex items-center justify-between text-sm"><b>রাউন্ড {bn(idx+1)} / {bn(qs.length)}</b><b className="num text-brand-700">স্কোর: {bn(score)}</b></div>
+    <p className="font-display mt-4 text-lg font-bold leading-snug">📏 <b>{q.pin.name}</b> থেকে সবচেয়ে দূরের জায়গা কোনটি?</p>
+    <p className="mt-1 text-xs text-gray-500">সরলরৈখিক (আকাশপথ) দূরত্বের হিসাব</p>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {q.options.map((op,i)=>{
+        const isAns=i===q.answer, isPick=i===picked;
+        let cls='border-[var(--line)] bg-white hover:border-brand-400';
+        if(picked!==null){ if(isAns)cls='border-green-600 bg-green-50'; else if(isPick)cls='border-red-500 bg-red-50'; else cls='border-[var(--line)] opacity-60'; }
+        return <button key={i} onClick={()=>choose(i)} disabled={picked!==null} className={`rounded-2xl border p-3 text-sm font-bold transition ${cls}`}>{op}{picked!==null&&isAns&&' ✓'}</button>;
+      })}
+    </div>
+    {picked!==null && (
+      <div className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
+        <b>📏 সঠিক উত্তর</b> থেকে দূরত্ব প্রায় <b className="num">{bn(q.dist)} কিমি</b> (সরলরৈখিক)।
+        <button onClick={next} className="btn mt-3 w-full">{idx+1>=qs.length?'ফলাফল দেখুন':'পরেরটি →'}</button>
+      </div>
+    )}
+  </div>;
+}
+
 /* ---------------- RESULT + LEADERBOARD ---------------- */
 function Result({game, score, total, onRestart}:{game:string; score:number; total:number; onRestart:()=>void}){
   const [name,setName]=useState(''); const [saved,setSaved]=useState(false);
@@ -170,14 +213,15 @@ function Leaderboard(){
 }
 
 /* ---------------- PAGE ---------------- */
-type Game = 'quiz'|'guess'|'puzzle'|'board'|null;
+type Game = 'quiz'|'guess'|'puzzle'|'farthest'|'board'|null;
 const TABS: {id:Exclude<Game,null>; icon:string; title:string; desc:string}[] = [
   {id:'quiz', icon:'🎯', title:'বোয়ালখালী কুইজ', desc:'১০টি প্রশ্ন — ইতিহাস, গ্রাম, বিশিষ্ট ব্যক্তি'},
   {id:'guess', icon:'🖼️', title:'জায়গা চেনো', desc:'বর্ণনা পড়ে দর্শনীয় স্থান চিনুন'},
   {id:'puzzle', icon:'🧩', title:'ম্যাপ পাজল', desc:'জায়গাটি কোন ইউনিয়নে?'},
+  {id:'farthest', icon:'📏', title:'দূরের জায়গা', desc:'কোনটি সবচেয়ে দূরে?'},
   {id:'board', icon:'🏆', title:'লিডারবোর্ড', desc:'সেরা স্কোরারদের তালিকা'},
 ];
-const NAMES: Record<string,string> = {quiz:'বোয়ালখালী কুইজ', guess:'জায়গা চেনো', puzzle:'ম্যাপ পাজল'};
+const NAMES: Record<string,string> = {quiz:'বোয়ালখালী কুইজ', guess:'জায়গা চেনো', puzzle:'ম্যাপ পাজল', farthest:'দূরের জায়গা'};
 
 export default function Khela(){
   const [game,setGame]=useState<Game>(null);
@@ -189,7 +233,7 @@ export default function Khela(){
 
   return <Shell><main className="mx-auto max-w-3xl space-y-6 p-3 md:p-4">
     <SectionTitle title="🎮 খেলা" sub="খেলুন, শিখুন, লিডারবোর্ডে নাম তুলুন"/>
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
       {TABS.map(t=>(
         <button key={t.id} onClick={()=>start(t.id)}
           className={`card lift press !p-4 text-center ${game===t.id?'!border-brand-600 ring-2 ring-brand-100':''}`}>
@@ -206,6 +250,7 @@ export default function Khela(){
         {game==='quiz' && <QuizGame onDone={done}/>}
         {game==='guess' && <GuessGame onDone={done}/>}
         {game==='puzzle' && <MapPuzzle onDone={done}/>}
+        {game==='farthest' && <FarthestGame onDone={done}/>}
       </div>
     )}
     {game && game!=='board' && result && (
