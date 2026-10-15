@@ -9,7 +9,7 @@ const LINKS:{href:string,label:string,sub?:string,Icon:any}[]=[
 {href:'/secret',label:'পরিচয় গোপন মোড',sub:'নাম-পরিচয় গোপন রেখে তথ্য দিন',Icon:EyeOff},
 {href:'/notifications/settings',label:'নোটিফিকেশন সেটিংস',Icon:BellRing},
 {href:'/emergency',label:'জরুরি সিটি ডিরেক্টরি',Icon:Siren},
-{href:'/about',label:'অ্যাপ নির্মাতা ও পরিচিতি',sub:'MD. Habibur Rahman',Icon:Info}];
+{href:'/about',label:'অ্যাপ নির্মাতা ও পরিচিতি',sub:'Rahul Devdas',Icon:Info}];
 export function Header(){ const [open,setOpen]=useState(false); const [shared,setShared]=useState(''); const s=useSiteSettings();
  const shareApp=async()=>{ setShared(''); const data={title:'বোয়ালখালী কানেক্ট',text:'বোয়ালখালী কানেক্ট — বোয়ালখালী, চট্টগ্রামের নাগরিক সেবা প্ল্যাটফর্ম',url:window.location.origin}; try{ if(navigator.share){ await navigator.share(data); setShared('শেয়ার হয়েছে ✅'); } else if(navigator.clipboard){ await navigator.clipboard.writeText(data.url); setShared('লিংক কপি হয়েছে'); } else { setShared(data.url); } }catch{ /* user cancelled the share sheet */ } };
  return <>

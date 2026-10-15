@@ -8,6 +8,6 @@ export function Footer(){ const s=useSiteSettings(); const year=bn(new Date().ge
   <VisitorCounter/>
   <nav aria-label="ফুটার লিংক" className="mt-4 flex flex-wrap gap-x-4 gap-y-2">{links.map(([h,l])=>(<Link key={h} href={h} className="rounded px-0.5 text-sm text-[var(--ink-soft)] hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">{l}</Link>))}</nav>
   {(s.contactPhone||s.contactEmail)&&<p className="mt-4 text-xs text-gray-500">যোগাযোগ: {s.contactPhone&&<a className="font-bold" href={`tel:${s.contactPhone}`}>📞 {bn(s.contactPhone)}</a>}{s.contactPhone&&s.contactEmail?' • ':''}{s.contactEmail&&<a className="font-bold" href={`mailto:${s.contactEmail}`}>✉️ {s.contactEmail}</a>}</p>}
-  <p className="mt-4 text-xs text-gray-400">নির্মাতা ও পরিচালক: MD. Habibur Rahman</p>
+  <p className="mt-4 text-xs text-gray-400">নির্মাতা ও পরিচালক: Rahul Devdas</p>
   <p className="text-xs text-gray-400">© {year} {s.siteName} — সর্বস্বত্ব সংরক্ষিত</p>
  </div></footer>}
