@@ -49,9 +49,20 @@ export function seedPlacesIfNeeded(db:any,userId='system'){ if(db.meta&&db.meta.
 // before it existed never receive it from seedBuiltinTypesIfEmpty (empty-only). Append
 // it exactly once, keyed by slug — idempotent, never overwrites an admin-edited type.
 export function seedEventTypeIfMissing(db:any,userId='system'){ if(!Array.isArray(db.content_types)||db.content_types.length===0) return false; if(db.content_types.some((t:any)=>t&&t.slug==='event')) return false; const t=buildBuiltinTypes(userId).find((x:any)=>x.slug==='event'); if(!t) return false; db.content_types.push(t); return true; }
+// Seed 4 verified educational institutions (from the /boalkhali verified content pack:
+// Wikipedia/Banglapedia/municipality sources) as PUBLISHED CMS contents. Same idempotency
+// contract as seedPlacesIfNeeded — runs once (db.meta.educationSeedV1), never resurrects
+// admin-unpublished records, adds only missing slugs.
+const EDUCATION_SEED:{typeSlug:string;slug:string;titleBn:string;shortDesc:string;area:string;fields:any}[]=[
+ {typeSlug:'college',slug:'sir-ashutosh-govt-college',titleBn:'স্যার আশুতোষ সরকারি কলেজ',shortDesc:'কানুনগোপাড়ায় ১৯৩৯ সালে প্রতিষ্ঠিত সরকারি কলেজ — উপজেলার প্রধান উচ্চশিক্ষা প্রতিষ্ঠান।',area:'কানুনগোপাড়া',fields:{establishedYear:1939,institutionType:'সরকারি'}},
+ {typeSlug:'college',slug:'boalkhali-sirajul-islam-degree-college',titleBn:'বোয়ালখালী সিরাজুল ইসলাম ডিগ্রি কলেজ',shortDesc:'উপজেলার বেসরকারি ডিগ্রি কলেজ।',area:'বোয়ালখালী',fields:{institutionType:'বেসরকারি'}},
+ {typeSlug:'school',slug:'kadhurkhil-govt-high-school',titleBn:'কধুরখীল সরকারি উচ্চ বিদ্যালয়',shortDesc:'কধুরখীলের সরকারি মাধ্যমিক বিদ্যালয় — এলাকার প্রধান স্কুল।',area:'কধুরখীল',fields:{institutionType:'সরকারি'}},
+ {typeSlug:'madrasa',slug:'shakpura-daruchchunnat-kamil-madrasa',titleBn:'শাকপুরা দারুচ্ছুন্নাত কামিল মাদরাসা',shortDesc:'শাকপুরার কামিল মাদরাসা — উচ্চ ইসলামি শিক্ষা প্রতিষ্ঠান।',area:'শাকপুরা',fields:{institutionType:'আলিয়া'}},
+];
+export function seedEducationIfNeeded(db:any,userId='system'){ if(db.meta&&db.meta.educationSeedV1) return false; if(!Array.isArray(db.contents)) db.contents=[]; const t=now(); let added=0; for(const s of EDUCATION_SEED){ const type=sanitizeContentType((db.content_types||[]).find((x:any)=>x.slug===s.typeSlug)); if(!type||!type.enabled) continue; const have=new Set(db.contents.filter((c:any)=>c&&c.typeSlug===s.typeSlug).map((c:any)=>String(c.slug))); if(have.has(s.slug)) continue; db.contents.push({id:id('cn'),typeSlug:s.typeSlug,slug:s.slug,titleBn:s.titleBn,titleEn:'',shortDesc:s.shortDesc,fullDesc:'',categorySlug:'',subcategorySlug:'',tags:['শিক্ষা'],featured:false,status:'PUBLISHED',fields:s.fields,images:[],location:{district:'চট্টগ্রাম',upazila:'বোয়ালখালী',union:'',area:s.area,address:'',mapsUrl:'',lat:null,lng:null},seo:{title:'',description:'',ogImage:'',canonical:''},createdBy:userId,updatedBy:userId,createdAt:t,updatedAt:t,publishedAt:t,schemaVersion:1}); added++; } if(!db.meta||typeof db.meta!=='object'||Array.isArray(db.meta)) db.meta={}; db.meta.educationSeedV1=true; return added>0; }
 // Both lazy seeds, in order (types first — the place seed needs the 'place' type).
-export function ensureCmsSeeds(db:any,userId='system'){ const a=seedBuiltinTypesIfEmpty(db,userId); const e=seedEventTypeIfMissing(db,userId); const b=seedPlacesIfNeeded(db,userId); return a||e||b; }
-export function needsCmsSeeds(db:any){ return !(Array.isArray(db.content_types)&&db.content_types.length)||!(db.meta&&db.meta.placesSeedV1)||!(db.content_types||[]).some((t:any)=>t&&t.slug==='event'); }
+export function ensureCmsSeeds(db:any,userId='system'){ const a=seedBuiltinTypesIfEmpty(db,userId); const e=seedEventTypeIfMissing(db,userId); const b=seedPlacesIfNeeded(db,userId); const d=seedEducationIfNeeded(db,userId); return a||e||b||d; }
+export function needsCmsSeeds(db:any){ return !(Array.isArray(db.content_types)&&db.content_types.length)||!(db.meta&&db.meta.placesSeedV1)||!(db.meta&&db.meta.educationSeedV1)||!(db.content_types||[]).some((t:any)=>t&&t.slug==='event'); }
 export function slugify(s:any){ let v=String(s||'').toLowerCase().trim().replace(/[\s_]+/g,'-').replace(/[^a-z0-9\u0980-\u09FF-]+/g,'').replace(/-+/g,'-').replace(/^-|-$/g,''); return v||'item'; }
 export const SLUG_OK=(s:string)=>/^[a-z0-9\u0980-\u09FF]+(-[a-z0-9\u0980-\u09FF]+)*$/.test(s);
 export function contentTitle(c:any){ return (c&&(c.titleBn||c.titleEn))||'(শিরোনামহীন)'; }
