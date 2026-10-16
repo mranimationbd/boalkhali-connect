@@ -27,8 +27,25 @@ const HISTORY: [string, string, string][] = [
  ['🎖️', 'মুক্তিযুদ্ধ', '১৯৭১ সালে কালুরঘাট, কানুনগোপাড়া, ফকিরনী দীঘির পাড়সহ উপজেলার নানা স্থানে সম্মুখ সমর হয়; স্মৃতিচিহ্ন হিসেবে কলেজ সংলগ্ন শহীদ স্মৃতিস্তম্ভ রয়েছে।'],
  ['🏺', 'প্রাচীন নিদর্শন', 'বাংলাপিডিয়ার তালিকায় বোয়ালখালীর ঐতিহ্যের মধ্যে আছে শ্রীপুর বুড়া মসজিদ, দেওয়ান ভিটা (আনুমানিক ১৭১১), করলডেঙ্গায় বু-আলী কালান্দরের মাজার, কালাচাঁদ ঠাকুরবাড়ি, লালার দীঘি, কানুনগোপাড়া শ্যামরায় মন্দির ও মেধস মুনির আশ্রম।'],
 ];
-const PERSONS: [string, string][] = [
- ['কল্পনা দত্ত (১৯১৩)', 'শ্রীপুর গ্রামে জন্ম; মাস্টারদা সূর্য সেনের ইন্ডিয়ান রিপাবলিকান আর্মির সদস্য বিপ্লবী নেত্রী।'],
+const DEMO: [string, string, string][] = [
+ ['🕌', 'ধর্মীয় অনুপাত (২০২২)', 'মুসলিম ৮০.৯৪%, হিন্দু ১৭.৩২%, বৌদ্ধ ১.৬৬%, অন্যান্য ০.০৮%'],
+ ['🏠', 'পরিবার', '৫৮,০১৪টি পরিবার (২০২২); ২০১১ সালে ছিল ৪৪,১০৮টি'],
+ ['🏙️', 'শহর বনাম গ্রাম', 'জনসংখ্যার ৫০.৬৮% শহর এলাকায় বাস করেন'],
+ ['⚖️', 'নারী-পুরুষ অনুপাত', 'প্রতি ১০০ জন নারীতে ৯৫.৭২ জন পুরুষ (২০২২)'],
+];
+const ECONOMY: [string, string][] = [
+ ['🌾', 'প্রধান ফসল: ধান, সরিষা, পেঁয়াজ, রসুন, মরিচ ও শাকসবজি। কর্ণফুলীর তীরবর্তী জমি চাষের জন্য অত্যন্ত উর্বর।'],
+ ['🍍', 'করলডেঙ্গা পাহাড়ে ফলের চাষ: কাঁঠাল, আম, জলপাই, পেঁপে, পেয়ারা, কামরাঙ্গা, কলা, আনারস, লেবু ও জাম্বুরা। আগর, রাবার ও সেগুন গাছের বাগানও আছে।'],
+ ['🐟', 'উপজেলাজুড়ে মৎস্য, দুগ্ধ ও পোল্ট্রি খামার রয়েছে — কর্মসংস্থানের বড় উৎস।'],
+ ['🧺', 'বিখ্যাত হাট-বাজার: হাজির হাট, চৌধুরী হাট, মুন্সি হাট, জমাদার হাটসহ মোট ১৭টি হাট-বাজার।'],
+];
+const CONNECT: [string, string][] = [
+ ['🛣️', 'প্রধান সড়ক: আরাকান সড়ক — চট্টগ্রাম শহরের সাথে মূল সংযোগ।'],
+ ['🛤️', 'রেলপথ: ৫ কিলোমিটার (চট্টগ্রাম–দোহাজারী লাইন, বেঙ্গুরা স্টেশন)।'],
+ ['🚗', 'সড়ক: ৯৫ কিমি পাকা, ২০০ কিমি আধাপাকা ও ৩২০ কিমি কাঁচা রাস্তা।'],
+ ['🚤', 'নদীপথ: ১০.৭৯ নটিক্যাল মাইল — কর্ণফুলীতে নৌ যোগাযোগ।'],
+];
+const PERSONS: [string, string][] = [ ['কল্পনা দত্ত (১৯১৩)', 'শ্রীপুর গ্রামে জন্ম; মাস্টারদা সূর্য সেনের ইন্ডিয়ান রিপাবলিকান আর্মির সদস্য বিপ্লবী নেত্রী।'],
  ['বিনোদ বিহারী চৌধুরী (১৯১১)', 'উত্তর ভূর্ষি গ্রামে জন্ম; সূর্য সেনের সহকর্মী ও স্বাধীনতা পুরস্কারপ্রাপ্ত শিক্ষাবিদ।'],
  ['রমেশ শীল (১৮৭৭)', 'পূর্ব গোমদণ্ডীতে জন্ম; বাংলা কবিগানের রূপকার ও একুশে পদকপ্রাপ্ত কবিয়াল।'],
  ['বিনয় বাঁশী জলদাস (১৯১১)', 'পূর্ব গোমদণ্ডীতে জন্ম; কিংবদন্তি ঢোলবাদক, একুশে পদক (২০০১) প্রাপ্ত।'],
@@ -84,6 +101,8 @@ export default async function BoalkhaliPage() {
     <a href="#jatayat" className="chip shrink-0 bg-brand-50 text-brand-800">কীভাবে যাবেন</a>
     <a href="#haat" className="chip shrink-0 bg-brand-50 text-brand-800">হাট-বাজার</a>
     <a href="#itihas" className="chip shrink-0 bg-brand-50 text-brand-800">ইতিহাস</a>
+    <a href="#jonomiti" className="chip shrink-0 bg-brand-50 text-brand-800">জনমিতি</a>
+    <a href="#orthoniti" className="chip shrink-0 bg-brand-50 text-brand-800">অর্থনীতি</a>
     <a href="#community" className="chip shrink-0 bg-brand-50 text-brand-800">কমিউনিটি</a>
    </div>
   </nav>
@@ -125,7 +144,7 @@ export default async function BoalkhaliPage() {
   <section>
    <SectionTitle title="🎓 শিক্ষা ও সেবা (সারাংশ)" sub="প্রকাশিত সূত্র থেকে সংকলিত"/>
    <div className="mt-3 grid gap-3 md:grid-cols-3">
-    <div className="card lift !p-4"><p className="font-display font-bold">🎓 শিক্ষা</p><p className="mt-1.5 text-sm leading-relaxed text-gray-600">সূত্র অনুযায়ী উপজেলায় ১টি সরকারি কলেজ, ৩টি বেসরকারি ডিগ্রি ও উচ্চ মাধ্যমিক কলেজ, ৩০টি মাধ্যমিক বিদ্যালয় ও ১৮টির বেশি মাদরাসা রয়েছে। প্রধান প্রতিষ্ঠান: স্যার আশুতোষ সরকারি কলেজ (কানুনগোপাড়া, প্রতিষ্ঠা ১৯৩৯), বোয়ালখালী সিরাজুল ইসলাম ডিগ্রি কলেজ, কধুরখীল সরকারি উচ্চ বিদ্যালয় ও শাকপুরা দারুচ্ছুন্নাত কামিল মাদরাসা।</p></div>
+    <div className="card lift !p-4"><p className="font-display font-bold">🎓 শিক্ষা</p><p className="mt-1.5 text-sm leading-relaxed text-gray-600">সূত্র অনুযায়ী: ১টি সরকারি কলেজ (১৯৮৬ সালে সরকারিকরণ), ২টি বেসরকারি ডিগ্রি কলেজ, ৩টি উচ্চ মাধ্যমিক কলেজ, ১টি কামিল মাদ্রাসা, ২টি ফাজিল মাদ্রাসা, ৩টি আলিম মাদ্রাসা, ১৩টি দাখিল মাদ্রাসা, ৩০টি মাধ্যমিক বিদ্যালয় (১টি সরকারি), ১১০টি প্রাথমিক বিদ্যালয়, ১৫টি এবতেদায়ী মাদ্রাসা ও ৩৪টি কিন্ডারগার্টেন। প্রধান প্রতিষ্ঠান: স্যার আশুতোষ সরকারি কলেজ (কানুনগোপাড়া, প্রতিষ্ঠা ১৯৩৯)।</p><Link href="/education" className="btn mt-3 !py-2 text-sm">শিক্ষা ডিরেক্টরি দেখুন →</Link></div>
     <div className="card lift !p-4"><p className="font-display font-bold">🏥 স্বাস্থ্য</p><p className="mt-1.5 text-sm leading-relaxed text-gray-600">বোয়ালখালী উপজেলা স্বাস্থ্য কমপ্লেক্স — সদরে অবস্থিত ৫০ শয্যার সরকারি হাসপাতাল। এছাড়া সূত্র অনুযায়ী ৬টি ইউনিয়ন স্বাস্থ্য কেন্দ্র ও ৯টি পরিবার কল্যাণ কেন্দ্র (FWC) রয়েছে।</p><Link href="/doctors" className="btn mt-3 !py-2 text-sm">ডাক্তার ডিরেক্টরি দেখুন →</Link></div>
     <div className="card lift !p-4"><p className="font-display font-bold">🏦 ব্যাংকিং</p><p className="mt-1.5 text-sm leading-relaxed text-gray-600">গোমদণ্ডী, কানুনগোপাড়া ও চৌধুরীহাট এলাকায় সোনালী, অগ্রণী, ইসলামী, এবি ও ওয়ান ব্যাংকসহ অন্তত ১১টি ব্যাংক শাখা এবং ডাচ-বাংলাসহ একাধিক ATM বুথ রয়েছে।</p></div>
    </div>
@@ -140,6 +159,27 @@ export default async function BoalkhaliPage() {
    <h3 className="font-display mt-5 text-base font-bold">বোয়ালখালীর গর্ব — বিখ্যাত ব্যক্তি</h3>
    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
     {PERSONS.map(([n, d]) => (<div key={n} className="card lift !p-3.5"><p className="font-display text-sm font-bold leading-snug">{n}</p><p className="mt-1 text-xs leading-relaxed text-gray-500">{d}</p></div>))}
+   </div>
+  </section>
+  {/* (h2) জনমিতি */}
+  <section id="jonomiti" className="scroll-mt-32">
+   <SectionTitle title="👥 জনমিতি" sub="আদমশুমারি ২০২২ অনুযায়ী"/>
+   <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+    {DEMO.map(([ic, k, v]) => (<div key={k} className="card lift !p-4"><span className="text-2xl" aria-hidden="true">{ic}</span><p className="mt-1 text-[11px] font-bold text-gray-400">{k}</p><p className="font-display text-sm font-bold leading-snug">{v}</p></div>))}
+   </div>
+  </section>
+  {/* (h3) অর্থনীতি */}
+  <section id="orthoniti" className="scroll-mt-32">
+   <SectionTitle title="🌾 অর্থনীতি ও জীবিকা" sub="কৃষি, ফলচাষ, মৎস্য ও হাট-বাজার"/>
+   <div className="mt-3 grid gap-3 md:grid-cols-2">
+    {ECONOMY.map(([ic, t]) => (<div key={t.slice(0, 24)} className="card lift flex gap-3 !p-4"><span className="text-2xl shrink-0" aria-hidden="true">{ic}</span><p className="text-sm leading-relaxed text-gray-700">{t}</p></div>))}
+   </div>
+  </section>
+  {/* (h4) যোগাযোগ */}
+  <section id="jogajog" className="scroll-mt-32">
+   <SectionTitle title="🛣️ যোগাযোগ ব্যবস্থা" sub="সড়ক, রেল ও নদীপথ"/>
+   <div className="mt-3 grid gap-3 md:grid-cols-2">
+    {CONNECT.map(([ic, t]) => (<div key={t.slice(0, 24)} className="card lift flex gap-3 !p-4"><span className="text-2xl shrink-0" aria-hidden="true">{ic}</span><p className="text-sm leading-relaxed text-gray-700">{t}</p></div>))}
    </div>
   </section>
   {/* (i) কমিউনিটি */}
@@ -158,6 +198,6 @@ export default async function BoalkhaliPage() {
     </div>
    </div>
   </section>
-  <p className="text-center text-[11px] text-gray-400">তথ্যসূত্র: উইকিপিডিয়া, বাংলাপিডিয়া, পৌরসভা পর্যটন পেজ ও জাতীয়/আঞ্চলিক সংবাদমাধ্যমের পাবলিক প্রতিবেদন (যাচাই: অক্টোবর ২০২৬)। কোনো তথ্য ভুল মনে হলে <Link href="/complaint" className="font-bold text-brand-700 underline">জানান</Link> — যাচাই করে ঠিক করা হবে।</p>
+  <p className="text-center text-[11px] text-gray-400">তথ্যসূত্র: উইকিপিডিয়া (বাংলা/ইংরেজি), বাংলাপিডিয়া, পৌরসভা পর্যটন পেজ, আদমশুমারি ২০২২ ও জাতীয়/আঞ্চলিক সংবাদমাধ্যমের পাবলিক প্রতিবেদন (যাচাই: অক্টোবর ২০২৬)। কোনো তথ্য ভুল মনে হলে <Link href="/complaint" className="font-bold text-brand-700 underline">জানান</Link> — যাচাই করে ঠিক করা হবে।</p>
  </main></Shell>;
 }
