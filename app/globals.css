@@ -32,6 +32,20 @@ input,select,textarea{border:1px solid var(--line);border-radius:var(--r-md);pad
 .skel::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.65) 50%,transparent 70%);animation:skel-shine 1.4s infinite}
 @keyframes skel-shine{to{transform:translateX(100%)}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* ---- create-flow motion (ux/create-overhaul) ---- */
+@keyframes rise-in{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.anim-rise{animation:rise-in .45s var(--ease) both}
+@keyframes step-in{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+.anim-step{animation:step-in .32s var(--ease) both}
+@keyframes pop-in{from{opacity:0;transform:scale(.92) translateY(8px)}to{opacity:1;transform:none}}
+.anim-pop{animation:pop-in .28s var(--ease) both}
+@keyframes ring-pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.45)}70%{box-shadow:0 0 0 10px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+.anim-ring{animation:ring-pulse 1.8s ease-out infinite}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brand-500);outline-offset:1px;border-color:var(--brand-500)}
+/* Scoped form-label rhythm for the create flow only */
+.create-flow label.cf-label{font-weight:700;font-size:14px;display:block}
+.create-flow label.cf-label>input,.create-flow label.cf-label>select,.create-flow label.cf-label>textarea{margin-top:6px;font-weight:400}
+.create-flow .cf-hint{font-size:12px;font-weight:400;color:var(--muted);margin-top:4px}
 .bk-marker{position:relative;width:26px;height:26px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:#059669;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}
 .bk-marker::after{content:'';position:absolute;inset:7px;border-radius:50%;background:#fff}
 .maplibregl-popup-content{font-family:inherit;border-radius:12px;line-height:1.45}
