@@ -1,4 +1,5 @@
-'use client'; import {Shell,PostCard} from '@/components/ui'; import {catIcon,catEmoji} from '@/lib/catIcons'; import {CATEGORY_THUMBS} from '@/lib/catThumbs'; import Image from 'next/image'; import {useState,useEffect,Fragment} from 'react'; import Link from 'next/link'; import {useRouter} from 'next/navigation'; import {errMsg} from '@/lib/errMsg';
+'use client'; import {Shell,PostCard} from '@/components/ui'; import {catIcon,catEmoji} from '@/lib/catIcons'; import {CATEGORY_THUMBS} from '@/lib/catThumbs'; import Image from 'next/image'; import {useState,useEffect,Fragment} from 'react'; import Link from 'next/link'; import dynamic from 'next/dynamic'; import {useRouter} from 'next/navigation'; import {errMsg} from '@/lib/errMsg';
+const Hero3D=dynamic(()=>import('@/components/CreateHero3D'),{ssr:false});
 
 // Per-category subcategory options (used when the DB category has none saved)
 const SUBCATS: Record<string,string[]> = {
@@ -84,12 +85,14 @@ function ActionBar({children}:{children:any}){
  </div>;
 }
 
-/* ---------- gradient hero ---------- */
+/* ---------- 3D hero (React Three Fiber) ---------- */
 function Hero(){
  return <div className="anim-rise relative overflow-hidden rounded-[var(--r-xl)] p-5 text-white shadow-[var(--shadow-2)]" style={{background:'linear-gradient(120deg,#065f46 0%,#0a7a54 55%,#10b981 100%)'}}>
-  <div className="absolute -right-4 -top-6 select-none text-[92px] opacity-15" aria-hidden="true">📝</div>
-  <h1 className="font-display text-xl font-black">নতুন পোস্ট করুন</h1>
-  <p className="mt-1 max-w-md text-sm text-white/90">বোয়ালখালীর হাজারো মানুষের কাছে পৌঁছে দিন — বাসা ভাড়া, বাই-সেল, সেবা, চাকরি ও আরও অনেক কিছু।</p>
+  <div className="pointer-events-none absolute inset-0" aria-hidden="true"><Hero3D/></div>
+  <div className="relative">
+   <h1 className="font-display text-xl font-black">নতুন পোস্ট করুন</h1>
+   <p className="mt-1 max-w-md text-sm text-white/90">বোয়ালখালীর হাজারো মানুষের কাছে পৌঁছে দিন — বাসা ভাড়া, বাই-সেল, সেবা, চাকরি ও আরও অনেক কিছু।</p>
+  </div>
  </div>;
 }
 
